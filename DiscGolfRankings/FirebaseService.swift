@@ -8,6 +8,7 @@ class FirebaseService: ObservableObject {
     private let db = Firestore.firestore()
 
     let daltonClubID = "wK75njjNDMQDmEdkWTHU"
+    let adminUID     = "[PASTE YOUR FIREBASE UID HERE]"
 
     // MARK: - Club
 
@@ -171,6 +172,17 @@ class FirebaseService: ObservableObject {
         ])
     }
 
+    // MARK: - User Memberships (multi-club)
+
+    func fetchUserMemberships(userId: String) async throws -> [Membership] {
+        let snapshot = try await db.collection("memberships")
+            .whereField("userId", isEqualTo: userId)
+            .getDocuments()
+        return try snapshot.documents
+            .compactMap { try $0.data(as: Membership.self) }
+            .filter { $0.isActive }
+    }
+
     // MARK: - Club Applications
 
     func submitClubApplication(
@@ -196,6 +208,38 @@ class FirebaseService: ObservableObject {
             "submittedAt": Timestamp(date: Date())
         ]
         try await db.collection("clubApplications").addDocument(data: data)
+    }
+
+    // MARK: - Admin: Club Application Management
+
+    func fetchPendingApplications() async throws -> [ClubApplication] {
+        let snapshot = try await db.collection("clubApplications")
+            .whereField("status", isEqualTo: "pending")
+            .order(by: "submittedAt", descending: true)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: ClubApplication.self) }
+    }
+
+    func approveClubApplication(_ application: ClubApplication) async throws {
+        guard let appId = application.id else { return }
+        let club = Club(
+            name: application.clubName,
+            location: "\(application.city), \(application.state)",
+            adminUID: application.applicantUserId,
+            status: .approved,
+            tagFee: 0,
+            setupFee: 0,
+            memberCount: 0,
+            createdAt: Date()
+        )
+        try db.collection("clubs").addDocument(from: club)
+        try await db.collection("clubApplications").document(appId)
+            .updateData(["status": "approved"])
+    }
+
+    func rejectClubApplication(_ applicationId: String) async throws {
+        try await db.collection("clubApplications").document(applicationId)
+            .updateData(["status": "rejected"])
     }
 
     // MARK: - Group Rounds

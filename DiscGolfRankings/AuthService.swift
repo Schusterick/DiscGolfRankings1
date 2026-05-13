@@ -32,7 +32,7 @@ class AuthService: ObservableObject {
     }
 
     var isSignedIn: Bool { currentUser != nil }
-    var isAppAdmin: Bool { currentUser?.email == "admin@discgolfrankings.com" }
+    var isAppAdmin: Bool { currentUser?.uid == FirebaseService.shared.adminUID }
 
     func signIn(email: String, password: String) async {
         isLoading = true

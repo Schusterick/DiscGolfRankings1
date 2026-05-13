@@ -25,6 +25,8 @@ struct DiscGolfRankingsApp: App {
 // MARK: - MainTabView
 
 struct MainTabView: View {
+    @EnvironmentObject var auth: AuthService
+
     var body: some View {
         TabView {
             DaltonHomeView()
@@ -35,6 +37,11 @@ struct MainTabView: View {
 
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.circle") }
+
+            if auth.isAppAdmin {
+                AdminTabView()
+                    .tabItem { Label("Admin", systemImage: "shield.checkered") }
+            }
         }
     }
 }
@@ -45,40 +52,40 @@ struct ProfileView: View {
     @EnvironmentObject var auth: AuthService
     private let service = FirebaseService.shared
 
-    @State private var membership:      Membership?
+    @State private var clubMemberships: [ClubWithMembership] = []
+    @State private var selectedIndex    = 0
     @State private var isLoading        = false
     @State private var isJoining        = false
     @State private var showClubRequest  = false
 
+    private var selected: ClubWithMembership? {
+        guard !clubMemberships.isEmpty, selectedIndex < clubMemberships.count else { return nil }
+        return clubMemberships[selectedIndex]
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                clubHeader
+                // Club picker — only visible when member of 2+ clubs
+                if clubMemberships.count > 1 {
+                    clubPicker.padding(.top, 8)
+                }
+
                 Spacer()
                 tagSection
                 Spacer()
                 accountSection
 
-                // Request a Club
-                Button {
-                    showClubRequest = true
-                } label: {
-                    Label("Request a Club", systemImage: "plus.circle")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.bordered)
-                .tint(.green)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 12)
+                requestClubButton
+                    .padding(.bottom, 12)
 
                 signOutButton
                     .padding(.bottom, 32)
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await loadMembership() }
-            .refreshable { await loadMembership() }
+            .task { await loadData() }
+            .refreshable { await loadData() }
             .sheet(isPresented: $showClubRequest) {
                 RequestClubView()
             }
@@ -87,30 +94,50 @@ struct ProfileView: View {
 
     // MARK: Sub-views
 
-    private var clubHeader: some View {
-        VStack(spacing: 4) {
-            Text("Dalton Disc Golf Club")
-                .font(.title2.bold())
-                .padding(.top, 24)
-            Text("Tag Match System")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    @ViewBuilder
+    private var clubPicker: some View {
+        // Segmented for 2–3 clubs, menu picker for 4+
+        if clubMemberships.count <= 3 {
+            Picker("Club", selection: $selectedIndex) {
+                ForEach(clubMemberships.indices, id: \.self) { i in
+                    Text(clubMemberships[i].club.name).tag(i)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+        } else {
+            Picker("Club", selection: $selectedIndex) {
+                ForEach(clubMemberships.indices, id: \.self) { i in
+                    Text(clubMemberships[i].club.name).tag(i)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 16)
     }
 
     @ViewBuilder
     private var tagSection: some View {
         if isLoading {
             ProgressView()
-        } else if let membership {
-            VStack(spacing: 6) {
-                Text("#\(membership.tagNumber)")
+        } else if let item = selected {
+            VStack(spacing: 8) {
+                Text(item.club.name)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Text("#\(item.membership.tagNumber)")
                     .font(.system(size: 96, weight: .black, design: .rounded))
                     .foregroundStyle(.green)
+
                 Text("Your Current Tag")
                     .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                Text("\(item.club.memberCount) member\(item.club.memberCount == 1 ? "" : "s")")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } else {
@@ -118,22 +145,13 @@ struct ProfileView: View {
                 Image(systemName: "tag.slash")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
-                Text("No Tag Yet")
+                Text("No Club Memberships")
                     .font(.title3.bold())
-                Button {
-                    joinClub()
-                } label: {
-                    Group {
-                        if isJoining { ProgressView() } else {
-                            Text("Join Dalton DGC").fontWeight(.semibold)
-                        }
-                    }
+                Text("Head to the Home tab to join Dalton DGC.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
-                    .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .disabled(isJoining)
             }
         }
     }
@@ -147,6 +165,19 @@ struct ProfileView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.bottom, 24)
+    }
+
+    private var requestClubButton: some View {
+        Button {
+            showClubRequest = true
+        } label: {
+            Label("Request a Club", systemImage: "plus.circle")
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.bordered)
+        .tint(.green)
+        .padding(.horizontal, 32)
     }
 
     private var signOutButton: some View {
@@ -164,22 +195,24 @@ struct ProfileView: View {
 
     // MARK: Data
 
-    private func loadMembership() async {
+    private func loadData() async {
         guard let uid = auth.currentUser?.uid else { return }
-        isLoading  = true
-        membership = try? await service.fetchMembership(userId: uid, clubId: service.daltonClubID)
-        isLoading  = false
-    }
+        isLoading = true
+        defer { isLoading = false }
 
-    private func joinClub() {
-        guard let uid = auth.currentUser?.uid else { return }
-        let name = auth.appUser?.displayName ?? auth.currentUser?.displayName ?? "Player"
-        isJoining = true
-        Task {
-            try? await service.joinDaltonClub(userId: uid, userFullName: name)
-            await loadMembership()
-            isJoining = false
+        let memberships = (try? await service.fetchUserMemberships(userId: uid)) ?? []
+
+        var items: [ClubWithMembership] = []
+        for m in memberships {
+            if let club = try? await service.fetchClub(id: m.clubId) {
+                items.append(ClubWithMembership(club: club, membership: m))
+            }
         }
+        // Sort by tag number so best rank appears first in the picker
+        clubMemberships = items.sorted { $0.membership.tagNumber < $1.membership.tagNumber }
+
+        // Keep selected index in bounds after a refresh
+        if selectedIndex >= clubMemberships.count { selectedIndex = 0 }
     }
 }
 
@@ -215,7 +248,6 @@ struct RequestClubView: View {
                     TextField("City *", text: $city)
                     TextField("State *", text: $state)
                 }
-
                 Section("Details") {
                     TextField("Description *", text: $description, axis: .vertical)
                         .lineLimit(3...6)
@@ -224,19 +256,15 @@ struct RequestClubView: View {
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
-
                 Section("Contact") {
                     TextField("Contact Email *", text: $contactEmail)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
-
                 if let errorMessage {
                     Section {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                            .font(.caption)
+                        Text(errorMessage).foregroundStyle(.red).font(.caption)
                     }
                 }
             }
@@ -250,8 +278,7 @@ struct RequestClubView: View {
                     if isSubmitting {
                         ProgressView()
                     } else {
-                        Button("Submit") { submit() }
-                            .disabled(!isValid)
+                        Button("Submit") { submit() }.disabled(!isValid)
                     }
                 }
             }
@@ -267,8 +294,8 @@ struct RequestClubView: View {
     }
 
     private func submit() {
-        isSubmitting  = true
-        errorMessage  = nil
+        isSubmitting = true
+        errorMessage = nil
         Task {
             do {
                 try await service.submitClubApplication(

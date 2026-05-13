@@ -87,6 +87,30 @@ struct TagResult: Identifiable {
     let score: Int
 }
 
+// MARK: - ClubApplication
+
+struct ClubApplication: Identifiable, Codable {
+    @DocumentID var id: String?
+    var clubName: String
+    var city: String
+    var state: String
+    var description: String
+    var website: String
+    var contactEmail: String
+    var applicantUserId: String
+    var applicantName: String
+    var status: String
+    var submittedAt: Date
+}
+
+// MARK: - ClubWithMembership (Profile multi-club)
+
+struct ClubWithMembership: Identifiable {
+    var id: String { membership.id ?? club.id ?? UUID().uuidString }
+    let club: Club
+    let membership: Membership
+}
+
 // MARK: - ClubJoinRequest
 
 struct ClubJoinRequest: Identifiable, Codable {
