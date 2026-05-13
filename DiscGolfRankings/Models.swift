@@ -43,7 +43,7 @@ struct Membership: Identifiable, Codable, Hashable {
     var tagNumber: Int
     var userFullName: String
     var joinedAt: Date
-    var isActive: Bool
+    var isActive: Bool?   // optional so docs written before this field was added still decode
 }
 
 // MARK: - Challenge

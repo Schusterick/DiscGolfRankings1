@@ -25,49 +25,64 @@ class FirebaseService: ObservableObject {
             .whereField("isActive", isEqualTo: true)
             .order(by: "tagNumber")
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: Membership.self) }
+        // try? per document so one bad doc never empties the whole list
+        return snapshot.documents.compactMap { try? $0.data(as: Membership.self) }
     }
 
     func fetchMembership(userId: String, clubId: String) async throws -> Membership? {
+        // No isActive filter in Firestore — avoids extra composite index requirement
         let snapshot = try await db.collection("memberships")
             .whereField("userId", isEqualTo: userId)
             .whereField("clubId", isEqualTo: clubId)
-            .whereField("isActive", isEqualTo: true)
             .limit(to: 1)
             .getDocuments()
-        return try snapshot.documents.first.flatMap { try $0.data(as: Membership.self) }
+        return snapshot.documents.first.flatMap { try? $0.data(as: Membership.self) }
     }
 
-    func joinDaltonClub(userId: String, userFullName: String) async throws {
-        // Prevent duplicate memberships
+    // Generalized join — works for any club, including Dalton
+    func joinClub(userId: String, userFullName: String, clubId: String) async throws {
+        // Duplicate check: userId + clubId only (no isActive in query)
         let existing = try await db.collection("memberships")
             .whereField("userId", isEqualTo: userId)
-            .whereField("clubId", isEqualTo: daltonClubID)
-            .whereField("isActive", isEqualTo: true)
+            .whereField("clubId", isEqualTo: clubId)
+            .limit(to: 1)
             .getDocuments()
         guard existing.documents.isEmpty else { return }
 
-        // Count current active members to determine tag number
-        let activeSnap = try await db.collection("memberships")
-            .whereField("clubId", isEqualTo: daltonClubID)
-            .whereField("isActive", isEqualTo: true)
+        // Count active members in Swift to determine next tag number
+        let snap = try await db.collection("memberships")
+            .whereField("clubId", isEqualTo: clubId)
             .getDocuments()
-        let nextTag = activeSnap.documents.count + 1
+        let activeCount = snap.documents
+            .compactMap { try? $0.data(as: Membership.self) }
+            .filter { $0.isActive != false }
+            .count
+        let nextTag = activeCount + 1
 
         let membership = Membership(
             userId: userId,
-            clubId: daltonClubID,
+            clubId: clubId,
             tagNumber: nextTag,
             userFullName: userFullName,
             joinedAt: Date(),
             isActive: true
         )
         try db.collection("memberships").addDocument(from: membership)
-
-        // Increment memberCount on the club document
-        try await db.collection("clubs").document(daltonClubID).updateData([
+        try await db.collection("clubs").document(clubId).updateData([
             "memberCount": FieldValue.increment(Int64(1))
         ])
+    }
+
+    func joinDaltonClub(userId: String, userFullName: String) async throws {
+        try await joinClub(userId: userId, userFullName: userFullName, clubId: daltonClubID)
+    }
+
+    func fetchApprovedClubs() async throws -> [Club] {
+        let snapshot = try await db.collection("clubs")
+            .whereField("status", isEqualTo: Club.ClubStatus.approved.rawValue)
+            .order(by: "name")
+            .getDocuments()
+        return snapshot.documents.compactMap { try? $0.data(as: Club.self) }
     }
 
     // MARK: - Challenges
@@ -178,9 +193,9 @@ class FirebaseService: ObservableObject {
         let snapshot = try await db.collection("memberships")
             .whereField("userId", isEqualTo: userId)
             .getDocuments()
-        return try snapshot.documents
-            .compactMap { try $0.data(as: Membership.self) }
-            .filter { $0.isActive }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: Membership.self) }
+            .filter { $0.isActive != false }
     }
 
     // MARK: - Club Applications

@@ -8,10 +8,11 @@ struct DaltonHomeView: View {
 
     @State private var club: Club?
     @State private var myMembership: Membership?
-    @State private var isLoading = false
-    @State private var isJoining = false
+    @State private var isLoading    = false
+    @State private var isJoining    = false
     @State private var joinError: String?
-    @State private var showGroupRound = false
+    @State private var showGroupRound  = false
+    @State private var showClubSearch  = false
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,7 @@ struct DaltonHomeView: View {
                         VStack(spacing: 24) {
                             clubHeaderCard
                             membershipCard
+                            findClubsButton
                         }
                         .padding()
                     }
@@ -36,6 +38,11 @@ struct DaltonHomeView: View {
                 Task { await loadData() }
             }) {
                 GroupRoundView()
+            }
+            .sheet(isPresented: $showClubSearch, onDismiss: {
+                Task { await loadData() }
+            }) {
+                ClubSearchView()
             }
         }
     }
@@ -116,15 +123,10 @@ struct DaltonHomeView: View {
                     Text(joinError).foregroundStyle(.red).font(.caption)
                 }
 
-                Button {
-                    joinClub()
-                } label: {
+                Button { joinDalton() } label: {
                     Group {
-                        if isJoining {
-                            ProgressView()
-                        } else {
-                            Text("Join Dalton DGC")
-                                .fontWeight(.semibold)
+                        if isJoining { ProgressView() } else {
+                            Text("Join Dalton DGC").fontWeight(.semibold)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -141,6 +143,19 @@ struct DaltonHomeView: View {
         }
     }
 
+    // MARK: Find Clubs Button
+
+    private var findClubsButton: some View {
+        Button { showClubSearch = true } label: {
+            Label("Search for Clubs", systemImage: "magnifyingglass")
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.bordered)
+        .tint(.green)
+    }
+
     // MARK: Data
 
     private func loadData() async {
@@ -153,7 +168,7 @@ struct DaltonHomeView: View {
         myMembership = (try? await memberFetch) ?? nil
     }
 
-    private func joinClub() {
+    private func joinDalton() {
         guard let uid = auth.currentUser?.uid else { return }
         let name = auth.appUser?.displayName ?? auth.currentUser?.displayName ?? "Player"
         isJoining = true
@@ -167,6 +182,133 @@ struct DaltonHomeView: View {
             }
             isJoining = false
         }
+    }
+}
+
+// MARK: - ClubSearchView
+
+struct ClubSearchView: View {
+    @EnvironmentObject var auth: AuthService
+    @Environment(\.dismiss) private var dismiss
+    private let service = FirebaseService.shared
+
+    @State private var clubs: [Club]         = []
+    @State private var memberships: [Membership] = []
+    @State private var isLoading             = false
+    @State private var joiningClubId: String?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading && clubs.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if clubs.isEmpty {
+                    ContentUnavailableView(
+                        "No clubs available yet.",
+                        systemImage: "magnifyingglass",
+                        description: Text("Check back after a club has been approved.")
+                    )
+                } else {
+                    List(clubs) { club in
+                        ClubSearchRowView(
+                            club: club,
+                            membership: memberships.first { $0.clubId == club.id },
+                            isJoining: joiningClubId == club.id
+                        ) {
+                            await joinClub(club)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Search for Clubs")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .task { await load() }
+            .refreshable { await load() }
+        }
+    }
+
+    private func load() async {
+        isLoading = true
+        guard let uid = auth.currentUser?.uid else { isLoading = false; return }
+        async let clubsFetch  = service.fetchApprovedClubs()
+        async let memberFetch = service.fetchUserMemberships(userId: uid)
+        clubs       = (try? await clubsFetch)  ?? []
+        memberships = (try? await memberFetch) ?? []
+        isLoading = false
+    }
+
+    private func joinClub(_ club: Club) async {
+        guard let clubId = club.id, let uid = auth.currentUser?.uid else { return }
+        let name = auth.appUser?.displayName ?? auth.currentUser?.displayName ?? "Player"
+        joiningClubId = clubId
+        try? await service.joinClub(userId: uid, userFullName: name, clubId: clubId)
+        // Refresh membership list so the row updates immediately
+        memberships = (try? await service.fetchUserMemberships(userId: uid)) ?? []
+        joiningClubId = nil
+    }
+}
+
+// MARK: - ClubSearchRowView
+
+struct ClubSearchRowView: View {
+    let club: Club
+    let membership: Membership?
+    let isJoining: Bool
+    let onJoin: () async -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Club info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(club.name)
+                    .font(.headline)
+                Text(club.location)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text("\(club.memberCount) member\(club.memberCount == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Member badge OR join button
+            if let m = membership {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("#\(m.tagNumber)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.green)
+                    Text("Member")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.green)
+                }
+            } else {
+                Button {
+                    Task { await onJoin() }
+                } label: {
+                    if isJoining {
+                        ProgressView()
+                            .frame(width: 60)
+                    } else {
+                        Text("Join")
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(isJoining)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -206,7 +348,6 @@ struct LeaderboardView: View {
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         }
-
                         ForEach(Array(leaderboard.enumerated()), id: \.element.id) { idx, member in
                             LeaderboardRowView(
                                 rank: idx + 1,
@@ -240,7 +381,6 @@ struct LeaderboardRowView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Tag badge
             Text("#\(membership.tagNumber)")
                 .font(.system(size: 17, weight: .black, design: .rounded))
                 .monospacedDigit()
@@ -262,10 +402,8 @@ struct LeaderboardRowView: View {
 
             Spacer()
 
-            // Medal emoji for top 3
             if let medal = medalEmoji {
-                Text(medal)
-                    .font(.title3)
+                Text(medal).font(.title3)
             }
         }
         .padding(.vertical, 6)
