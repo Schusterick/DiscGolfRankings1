@@ -8,7 +8,7 @@ class FirebaseService: ObservableObject {
     private let db = Firestore.firestore()
 
     let daltonClubID = "wK75njjNDMQDmEdkWTHU"
-    let adminUID     = "[PASTE YOUR FIREBASE UID HERE]"
+    let adminUID     = "mCu5lZBrUfey3x8BOQnylPGj8Ik2"
 
     // MARK: - Club
 
