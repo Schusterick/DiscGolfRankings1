@@ -77,6 +77,16 @@ struct Challenge: Identifiable, Codable, Hashable {
     }
 }
 
+// MARK: - TagResult (Group Round)
+
+struct TagResult: Identifiable {
+    var id: String { membership.userId }
+    let membership: Membership
+    let oldTag: Int
+    let newTag: Int
+    let score: Int
+}
+
 // MARK: - ClubJoinRequest
 
 struct ClubJoinRequest: Identifiable, Codable {

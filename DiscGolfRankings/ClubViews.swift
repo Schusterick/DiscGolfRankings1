@@ -10,12 +10,13 @@ struct DaltonHomeView: View {
     @State private var myMembership: Membership?
     @State private var isLoading = false
     @State private var isJoining = false
-    @State private var error: String?
+    @State private var joinError: String?
+    @State private var showGroupRound = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
+                if isLoading && club == nil {
                     ProgressView()
                 } else {
                     ScrollView {
@@ -31,8 +32,15 @@ struct DaltonHomeView: View {
             .navigationBarTitleDisplayMode(.large)
             .task { await loadData() }
             .refreshable { await loadData() }
+            .sheet(isPresented: $showGroupRound, onDismiss: {
+                Task { await loadData() }
+            }) {
+                GroupRoundView()
+            }
         }
     }
+
+    // MARK: Club Header
 
     private var clubHeaderCard: some View {
         VStack(spacing: 12) {
@@ -42,7 +50,7 @@ struct DaltonHomeView: View {
 
             if let club {
                 HStack(spacing: 24) {
-                    VStack {
+                    VStack(spacing: 2) {
                         Text(club.location)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -51,7 +59,7 @@ struct DaltonHomeView: View {
                             .foregroundStyle(.tertiary)
                     }
                     Divider().frame(height: 36)
-                    VStack {
+                    VStack(spacing: 2) {
                         Text("\(club.memberCount)")
                             .font(.title3.bold())
                         Label("Members", systemImage: "person.2")
@@ -66,10 +74,12 @@ struct DaltonHomeView: View {
         .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
     }
 
+    // MARK: Membership Card
+
     @ViewBuilder
     private var membershipCard: some View {
         if let membership = myMembership {
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Text("Your Tag")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -79,6 +89,19 @@ struct DaltonHomeView: View {
                 Text("Member since \(membership.joinedAt.formatted(date: .abbreviated, time: .omitted))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Divider().padding(.vertical, 4)
+
+                Button {
+                    showGroupRound = true
+                } label: {
+                    Label("Play for Tags", systemImage: "flag.checkered.2.crossed")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
             }
             .frame(maxWidth: .infinity)
             .padding(24)
@@ -89,8 +112,8 @@ struct DaltonHomeView: View {
                 Text("You're not a member yet.")
                     .foregroundStyle(.secondary)
 
-                if let error {
-                    Text(error).foregroundStyle(.red).font(.caption)
+                if let joinError {
+                    Text(joinError).foregroundStyle(.red).font(.caption)
                 }
 
                 Button {
@@ -118,13 +141,15 @@ struct DaltonHomeView: View {
         }
     }
 
+    // MARK: Data
+
     private func loadData() async {
         isLoading = true
         defer { isLoading = false }
         guard let uid = auth.currentUser?.uid else { return }
-        async let clubFetch = service.fetchClub(id: service.daltonClubID)
+        async let clubFetch   = service.fetchClub(id: service.daltonClubID)
         async let memberFetch = service.fetchMembership(userId: uid, clubId: service.daltonClubID)
-        club = (try? await clubFetch) ?? nil
+        club         = (try? await clubFetch)   ?? nil
         myMembership = (try? await memberFetch) ?? nil
     }
 
@@ -132,13 +157,13 @@ struct DaltonHomeView: View {
         guard let uid = auth.currentUser?.uid else { return }
         let name = auth.appUser?.displayName ?? auth.currentUser?.displayName ?? "Player"
         isJoining = true
-        error = nil
+        joinError = nil
         Task {
             do {
                 try await service.joinDaltonClub(userId: uid, userFullName: name)
                 await loadData()
             } catch {
-                self.error = error.localizedDescription
+                joinError = error.localizedDescription
             }
             isJoining = false
         }
@@ -159,10 +184,29 @@ struct LeaderboardView: View {
             Group {
                 if isLoading && leaderboard.isEmpty {
                     ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if leaderboard.isEmpty {
-                    ContentUnavailableView("No Members Yet", systemImage: "person.2")
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No members yet.")
+                            .font(.title3.bold())
+                        Text("Be the first to join!")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
+                        Section {
+                            Text("\(leaderboard.count) Member\(leaderboard.count == 1 ? "" : "s")")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+
                         ForEach(Array(leaderboard.enumerated()), id: \.element.id) { idx, member in
                             LeaderboardRowView(
                                 rank: idx + 1,
@@ -195,41 +239,54 @@ struct LeaderboardRowView: View {
     let isCurrentUser: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
+            // Tag badge
             Text("#\(membership.tagNumber)")
-                .font(.title3.monospacedDigit().bold())
-                .foregroundStyle(tagColor)
-                .frame(width: 52, alignment: .leading)
+                .font(.system(size: 17, weight: .black, design: .rounded))
+                .monospacedDigit()
+                .padding(.horizontal, 11)
+                .padding(.vertical, 7)
+                .background(badgeColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 9))
+                .foregroundStyle(badgeColor)
+                .frame(minWidth: 62, alignment: .center)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(membership.userFullName)
-                        .fontWeight(isCurrentUser ? .bold : .regular)
-                    if isCurrentUser {
-                        Text("(You)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                Text(membership.userFullName)
+                    .fontWeight(isCurrentUser ? .bold : .regular)
+                if isCurrentUser {
+                    Text("You")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.green)
                 }
             }
 
             Spacer()
 
-            if rank == 1 {
-                Text("🏆")
+            // Medal emoji for top 3
+            if let medal = medalEmoji {
+                Text(medal)
                     .font(.title3)
             }
         }
         .padding(.vertical, 6)
-        .listRowBackground(isCurrentUser ? Color.green.opacity(0.08) : nil)
+        .listRowBackground(isCurrentUser ? Color.green.opacity(0.08) : Color.clear)
     }
 
-    private var tagColor: Color {
+    private var badgeColor: Color {
         switch rank {
-        case 1: return .yellow
-        case 2: return .gray
-        case 3: return .brown
-        default: return .primary
+        case 1:  return .yellow
+        case 2:  return Color(white: 0.55)
+        case 3:  return .brown
+        default: return isCurrentUser ? .green : .primary
+        }
+    }
+
+    private var medalEmoji: String? {
+        switch rank {
+        case 1: return "🏆"
+        case 2: return "🥈"
+        case 3: return "🥉"
+        default: return nil
         }
     }
 }

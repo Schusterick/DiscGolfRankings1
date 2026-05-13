@@ -170,4 +170,71 @@ class FirebaseService: ObservableObject {
             "status": Challenge.ChallengeStatus.cancelled.rawValue
         ])
     }
+
+    // MARK: - Club Applications
+
+    func submitClubApplication(
+        clubName: String,
+        city: String,
+        state: String,
+        description: String,
+        website: String,
+        contactEmail: String,
+        applicantUserId: String,
+        applicantName: String
+    ) async throws {
+        let data: [String: Any] = [
+            "clubName": clubName,
+            "city": city,
+            "state": state,
+            "description": description,
+            "website": website,
+            "contactEmail": contactEmail,
+            "applicantUserId": applicantUserId,
+            "applicantName": applicantName,
+            "status": "pending",
+            "submittedAt": Timestamp(date: Date())
+        ]
+        try await db.collection("clubApplications").addDocument(data: data)
+    }
+
+    // MARK: - Group Rounds
+
+    func saveGroupRound(
+        clubId: String,
+        results: [TagResult],
+        scores: [String: Int],
+        confirmedBy: String
+    ) async throws {
+        let batch = db.batch()
+
+        var tagsBefore: [String: Int] = [:]
+        var tagsAfter:  [String: Int] = [:]
+        var playerIds:  [String]      = []
+
+        for result in results {
+            guard let docID = result.membership.id else { continue }
+            let ref = db.collection("memberships").document(docID)
+            if result.oldTag != result.newTag {
+                batch.updateData(["tagNumber": result.newTag], forDocument: ref)
+            }
+            tagsBefore[result.membership.userId] = result.oldTag
+            tagsAfter[result.membership.userId]  = result.newTag
+            playerIds.append(result.membership.userId)
+        }
+
+        let roundData: [String: Any] = [
+            "clubId":      clubId,
+            "playerIds":   playerIds,
+            "scores":      scores,
+            "tagsBefore":  tagsBefore,
+            "tagsAfter":   tagsAfter,
+            "playedAt":    Timestamp(date: Date()),
+            "confirmedBy": confirmedBy
+        ]
+        let roundRef = db.collection("rounds").document()
+        batch.setData(roundData, forDocument: roundRef)
+
+        try await batch.commit()
+    }
 }

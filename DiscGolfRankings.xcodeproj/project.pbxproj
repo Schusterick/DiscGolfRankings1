@@ -16,6 +16,7 @@
 		B0010012 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010013 /* AuthViews.swift */; };
 		B0010014 /* ClubViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010015 /* ClubViews.swift */; };
 		B0010016 /* ChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010017 /* ChallengeViews.swift */; };
+		B0010090 /* GroupRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010091 /* GroupRoundViews.swift */; };
 		B0010018 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B0010019 /* GoogleService-Info.plist */; };
 		B001001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B001001B /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -29,6 +30,7 @@
 		B0010013 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
 		B0010015 /* ClubViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubViews.swift; sourceTree = "<group>"; };
 		B0010017 /* ChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeViews.swift; sourceTree = "<group>"; };
+		B0010091 /* GroupRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRoundViews.swift; sourceTree = "<group>"; };
 		B0010019 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B001001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0010020 /* DiscGolfRankings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiscGolfRankings.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,6 +68,7 @@
 				B0010013 /* AuthViews.swift */,
 				B0010015 /* ClubViews.swift */,
 				B0010017 /* ChallengeViews.swift */,
+				B0010091 /* GroupRoundViews.swift */,
 				B0010019 /* GoogleService-Info.plist */,
 				B001001B /* Assets.xcassets */,
 			);
@@ -164,6 +167,7 @@
 				B0010012 /* AuthViews.swift in Sources */,
 				B0010014 /* ClubViews.swift in Sources */,
 				B0010016 /* ChallengeViews.swift in Sources */,
+				B0010090 /* GroupRoundViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
