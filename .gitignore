@@ -1,0 +1,60 @@
+# ─── macOS ────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ─── Xcode ────────────────────────────────────────────────────────────────
+# User-specific files
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xcuserstate
+*.xcuserstatedata
+*.xccheckout
+*.moved-aside
+
+# Build products
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode workspace user data
+*.xcworkspace/xcuserdata/
+*.xcworkspace/contents.xcworkspacedata.lock
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# ─── Swift Package Manager ────────────────────────────────────────────────
+.build/
+Packages/
+Package.pins
+Package.resolved
+.swiftpm/
+
+# ─── CocoaPods (just in case) ─────────────────────────────────────────────
+Pods/
+*.xcworkspace
+
+# ─── Fastlane (just in case) ──────────────────────────────────────────────
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ─── App secrets — never commit these ─────────────────────────────────────
+# GoogleService-Info.plist is required for Firebase to work in dev,
+# but should be reviewed before committing in production-grade repos.
+# *.plist
+
+# ─── Editor / OS noise ────────────────────────────────────────────────────
+*.swp
+*.swo
+.idea/
+.vscode/
