@@ -1,340 +1,409 @@
 import SwiftUI
 
-// MARK: - ChallengesTabView
+// MARK: - SendChallengeView
+// Presented from the Leaderboard when a player taps "Challenge" next to another member.
+// Captures a short message + optional location/date, then creates the Challenge doc
+// and a notification on the defendant.
 
-struct ChallengesTabView: View {
+struct SendChallengeView: View {
+    let club:      Club
+    let challenger: Membership      // current user's membership
+    let defendant:  Membership      // target player's membership
+
     @EnvironmentObject var auth: AuthService
+    @Environment(\.dismiss) private var dismiss
     private let service = FirebaseService.shared
 
-    @State private var myMemberships: [Membership] = []
-    @State private var selectedMembership: Membership?
-    @State private var challenges: [Challenge] = []
-    @State private var isLoading = false
+    @State private var message:          String = ""
+    @State private var proposedLocation: String = ""
+    @State private var proposedDate:     Date   = Date().addingTimeInterval(60 * 60 * 24 * 3) // +3 days
+    @State private var includeDate:      Bool   = false
+    @State private var isSending         = false
+    @State private var errorMsg:         String?
+    @State private var showSuccess       = false
 
     var body: some View {
         NavigationStack {
-            Group {
-                if myMemberships.isEmpty && !isLoading {
-                    ContentUnavailableView(
-                        "No Club Memberships",
-                        systemImage: "figure.disc.sports",
-                        description: Text("Join a club to start tracking challenges.")
-                    )
-                } else {
-                    VStack(spacing: 0) {
-                        if myMemberships.count > 1 {
-                            Picker("Club", selection: $selectedMembership) {
-                                ForEach(myMemberships, id: \.id) { m in
-                                    Text(m.clubId).tag(Optional(m))
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                Form {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("#\(defendant.tagNumber)")
+                                    .font(.title2.bold().monospacedDigit())
+                                    .foregroundStyle(Theme.gold)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(defendant.userFullName)
+                                        .font(.headline).foregroundStyle(Theme.textPrimary)
+                                    Text(club.name)
+                                        .font(.caption).foregroundStyle(Theme.textSecondary)
                                 }
                             }
-                            .pickerStyle(.segmented)
-                            .padding()
                         }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(Theme.card)
 
-                        List {
-                            Section("Active") {
-                                let active = challenges.filter { $0.isActive }
-                                if active.isEmpty {
-                                    Text("No active challenges").foregroundStyle(.secondary)
-                                } else {
-                                    ForEach(active) { c in
-                                        ChallengeRowView(challenge: c)
-                                    }
-                                }
-                            }
-                            Section("History") {
-                                let history = challenges.filter { !$0.isActive }
-                                if history.isEmpty {
-                                    Text("No completed challenges").foregroundStyle(.secondary)
-                                } else {
-                                    ForEach(history) { c in
-                                        ChallengeRowView(challenge: c)
-                                    }
-                                }
-                            }
+                    Section("Message (optional)") {
+                        TextField("Bring your A-game…", text: $message, axis: .vertical)
+                            .lineLimit(2...5)
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    Section("Where (optional)") {
+                        TextField("Course or location", text: $proposedLocation)
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    Section {
+                        Toggle("Suggest a date", isOn: $includeDate)
+                            .foregroundStyle(Theme.textPrimary)
+                            .tint(Theme.accent)
+                        if includeDate {
+                            DatePicker("Date", selection: $proposedDate,
+                                       in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                                .foregroundStyle(Theme.textPrimary)
                         }
                     }
+                    .listRowBackground(Theme.card)
+
+                    if let errorMsg {
+                        Section { Text(errorMsg).foregroundStyle(.red).font(.caption) }
+                            .listRowBackground(Theme.card)
+                    }
+
+                    Section {
+                        Button { Task { await send() } } label: {
+                            Group {
+                                if isSending { ProgressView().tint(.white) }
+                                else { Text("Send Challenge").fontWeight(.semibold).foregroundStyle(.white) }
+                            }
+                            .frame(maxWidth: .infinity).padding(.vertical, 4)
+                        }
+                        .disabled(isSending)
+                    }
+                    .listRowBackground(Theme.accent.opacity(0.85))
+                }
+                .darkListStyle()
+            }
+            .navigationTitle("Challenge")
+            .navigationBarTitleDisplayMode(.inline)
+            .darkNavBar()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.foregroundStyle(Theme.accent)
+                }
+            }
+            .alert("Challenge Sent!", isPresented: $showSuccess) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("\(defendant.userFullName) will see this in their notifications.")
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func send() async {
+        guard let clubId = club.id else { return }
+        isSending = true; errorMsg = nil
+
+        // Look up the defendant's email so the accept flow can mailto them
+        let defendantUser = try? await service.fetchUser(uid: defendant.userId)
+
+        let challenge = Challenge(
+            id: nil,
+            clubID:           clubId,
+            clubName:         club.name,
+            challengerUID:    challenger.userId,
+            challengerName:   challenger.userFullName,
+            challengerTag:    challenger.tagNumber,
+            challengerEmail:  auth.currentUser?.email,
+            defendantUID:     defendant.userId,
+            defendantName:    defendant.userFullName,
+            defendantTag:     defendant.tagNumber,
+            defendantEmail:   defendantUser?.email ?? defendant.email,
+            status:           .pending,
+            createdAt:        Date(),
+            resolvedAt:       nil,
+            winnerUID:        nil,
+            courseName:       nil,
+            notes:            nil,
+            message:          message.trimmingCharacters(in: .whitespaces),
+            proposedLocation: proposedLocation.trimmingCharacters(in: .whitespaces),
+            proposedDate:     includeDate ? proposedDate : nil
+        )
+
+        do {
+            _ = try await service.sendChallenge(challenge)
+            showSuccess = true
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        isSending = false
+    }
+}
+
+// MARK: - MyChallengesView
+// Opened from Profile → "Challenges". Shows incoming + outgoing with Accept/Decline actions.
+
+struct MyChallengesView: View {
+    @EnvironmentObject var auth: AuthService
+    @Environment(\.dismiss) private var dismiss
+    private let service = FirebaseService.shared
+
+    @State private var challenges: [Challenge] = []
+    @State private var isLoading  = false
+    @State private var processing: String?
+    @State private var errorMsg:   String?
+
+    private var myUID: String { auth.currentUser?.uid ?? "" }
+    private var incoming: [Challenge] {
+        challenges.filter { $0.defendantUID == myUID && $0.status == .pending }
+    }
+    private var outgoing: [Challenge] {
+        challenges.filter { $0.challengerUID == myUID && $0.status == .pending }
+    }
+    private var history: [Challenge] {
+        challenges.filter { $0.status != .pending }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+
+                if isLoading && challenges.isEmpty {
+                    ProgressView().tint(Theme.accent)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if challenges.isEmpty {
+                    ContentUnavailableView(
+                        "No Challenges",
+                        systemImage: "flag.checkered",
+                        description: Text("Challenge a player from the Leaderboard tab.")
+                    )
+                    .foregroundStyle(Theme.textSecondary)
+                } else {
+                    List {
+                        if !incoming.isEmpty {
+                            Section("Incoming (\(incoming.count))") {
+                                ForEach(incoming) { c in
+                                    ChallengeRow(
+                                        challenge: c,
+                                        isIncoming: true,
+                                        isProcessing: processing == c.id,
+                                        onAccept:  { await respond(c, accept: true) },
+                                        onDecline: { await respond(c, accept: false) }
+                                    )
+                                    .listRowBackground(Theme.card)
+                                }
+                            }
+                        }
+                        if !outgoing.isEmpty {
+                            Section("Sent (\(outgoing.count))") {
+                                ForEach(outgoing) { c in
+                                    ChallengeRow(
+                                        challenge: c,
+                                        isIncoming: false,
+                                        isProcessing: false,
+                                        onAccept: { }, onDecline: { }
+                                    )
+                                    .listRowBackground(Theme.card)
+                                }
+                            }
+                        }
+                        if !history.isEmpty {
+                            Section("History") {
+                                ForEach(history) { c in
+                                    ChallengeRow(
+                                        challenge: c,
+                                        isIncoming: c.defendantUID == myUID,
+                                        isProcessing: false,
+                                        onAccept: { }, onDecline: { }
+                                    )
+                                    .listRowBackground(Theme.card)
+                                }
+                            }
+                        }
+
+                        if let errorMsg {
+                            Section { Text(errorMsg).foregroundStyle(.red).font(.caption) }
+                                .listRowBackground(Theme.card)
+                        }
+                    }
+                    .darkListStyle()
                 }
             }
             .navigationTitle("Challenges")
-            .overlay { if isLoading { ProgressView() } }
-            .task { await loadData() }
-            .refreshable { await loadData() }
-            .onChange(of: selectedMembership) { _, _ in
-                Task { await loadChallenges() }
-            }
-        }
-    }
-
-    private func loadData() async {
-        isLoading = true
-        defer { isLoading = false }
-        guard let uid = auth.currentUser?.uid else { return }
-        do {
-            if let m = try await service.fetchMembership(userId: uid, clubId: service.daltonClubID) {
-                myMemberships = [m]
-                if selectedMembership == nil { selectedMembership = m }
-            }
-            await loadChallenges()
-        } catch {
-            // silently fail — empty state handles it
-        }
-    }
-
-    private func loadChallenges() async {
-        guard let m = selectedMembership else { return }
-        challenges = (try? await service.fetchChallenges(clubID: m.clubId, userId: m.userId)) ?? []
-    }
-}
-
-// MARK: - ChallengeRowView
-
-struct ChallengeRowView: View {
-    let challenge: Challenge
-    @EnvironmentObject var auth: AuthService
-    private let service = FirebaseService.shared
-    @State private var showResolve = false
-
-    private var isChallenger: Bool { challenge.challengerUID == auth.currentUser?.uid }
-    private var isDefendant: Bool { challenge.defendantUID == auth.currentUser?.uid }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("\(challenge.challengerName) (#\(challenge.challengerTag))")
-                        .fontWeight(isChallenger ? .bold : .regular)
-                    Text("vs")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(challenge.defendantName) (#\(challenge.defendantTag))")
-                        .fontWeight(isDefendant ? .bold : .regular)
-                }
-                Spacer()
-                statusBadge
-            }
-
-            if let course = challenge.courseName, !course.isEmpty {
-                Label(course, systemImage: "mappin").font(.caption).foregroundStyle(.secondary)
-            }
-
-            actionButtons
-        }
-        .padding(.vertical, 4)
-        .sheet(isPresented: $showResolve) {
-            ResolveChallengeView(challenge: challenge)
-        }
-    }
-
-    @ViewBuilder
-    private var statusBadge: some View {
-        let (label, color) = statusInfo
-        Text(label)
-            .font(.caption.bold())
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.15))
-            .foregroundStyle(color)
-            .clipShape(Capsule())
-    }
-
-    private var statusInfo: (String, Color) {
-        switch challenge.status {
-        case .pending: return ("Pending", .orange)
-        case .accepted: return ("Accepted", .blue)
-        case .completed:
-            let won = challenge.winnerUID == auth.currentUser?.uid
-            return (won ? "Won" : "Lost", won ? .green : .red)
-        case .declined: return ("Declined", .red)
-        case .cancelled: return ("Cancelled", .gray)
-        }
-    }
-
-    @ViewBuilder
-    private var actionButtons: some View {
-        if challenge.status == .pending && isDefendant {
-            HStack {
-                Button("Accept") {
-                    Task { try? await service.respondToChallenge(challenge.id ?? "", accept: true) }
-                }
-                .buttonStyle(.bordered).tint(.green)
-
-                Button("Decline") {
-                    Task { try? await service.respondToChallenge(challenge.id ?? "", accept: false) }
-                }
-                .buttonStyle(.bordered).tint(.red)
-            }
-        } else if challenge.status == .accepted && (isChallenger || isDefendant) {
-            Button("Enter Result") { showResolve = true }
-                .buttonStyle(.borderedProminent).tint(.blue)
-        } else if challenge.status == .pending && isChallenger {
-            Button("Cancel") {
-                Task { try? await service.cancelChallenge(challenge.id ?? "") }
-            }
-            .buttonStyle(.bordered).tint(.gray)
-        }
-    }
-}
-
-// MARK: - CreateChallengeView
-
-struct CreateChallengeView: View {
-    let club: Club
-    let myMembership: Membership
-    let leaderboard: [Membership]
-
-    @Environment(\.dismiss) var dismiss
-    private let service = FirebaseService.shared
-
-    @State private var selectedDefendant: Membership?
-    @State private var courseName = ""
-    @State private var notes = ""
-    @State private var isSubmitting = false
-    @State private var error: String?
-
-    private var eligibleOpponents: [Membership] {
-        leaderboard.filter { $0.userId != myMembership.userId && $0.tagNumber < myMembership.tagNumber }
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Challenge Who?") {
-                    if eligibleOpponents.isEmpty {
-                        Text("You hold the #1 tag — no one to challenge!")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Opponent", selection: $selectedDefendant) {
-                            Text("Select player").tag(Optional<Membership>.none)
-                            ForEach(eligibleOpponents, id: \.id) { m in
-                                Text("#\(m.tagNumber) \(m.userFullName)").tag(Optional(m))
-                            }
-                        }
-                    }
-                }
-
-                Section("Details (optional)") {
-                    TextField("Course Name", text: $courseName)
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...5)
-                }
-
-                if let error {
-                    Section { Text(error).foregroundStyle(.red).font(.caption) }
-                }
-            }
-            .navigationTitle("New Challenge")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .darkNavBar()
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Send") { sendChallenge() }
-                        .disabled(selectedDefendant == nil || isSubmitting)
+                    Button("Done") { dismiss() }.foregroundStyle(Theme.accent)
                 }
             }
+            .task { await load() }
+            .refreshable { await load() }
         }
+        .preferredColorScheme(.dark)
     }
 
-    private func sendChallenge() {
-        guard let opponent = selectedDefendant, let clubID = club.id else { return }
-        isSubmitting = true
-        Task {
-            do {
-                try await service.createChallenge(
-                    clubID: clubID,
-                    challengerMembership: myMembership,
-                    defendantMembership: opponent,
-                    courseName: courseName.isEmpty ? nil : courseName,
-                    notes: notes.isEmpty ? nil : notes
-                )
-                dismiss()
-            } catch {
-                self.error = error.localizedDescription
-                isSubmitting = false
+    private func load() async {
+        guard let uid = auth.currentUser?.uid else { return }
+        isLoading = true; errorMsg = nil
+        do { challenges = try await service.fetchUserChallenges(userId: uid) }
+        catch { errorMsg = error.localizedDescription }
+        isLoading = false
+    }
+
+    private func respond(_ challenge: Challenge, accept: Bool) async {
+        guard let cid = challenge.id else { return }
+        processing = cid
+        do {
+            try await service.updateChallengeStatus(
+                challengeId: cid,
+                status: accept ? .accepted : .declined
+            )
+            // If accepted, launch the user's mail app to coordinate
+            if accept, let email = challenge.challengerEmail, !email.isEmpty {
+                openMail(to: email, challenge: challenge)
             }
+            await load()
+        } catch { errorMsg = error.localizedDescription }
+        processing = nil
+    }
+
+    /// Opens the user's default mail client with a pre-filled subject and body.
+    private func openMail(to email: String, challenge: Challenge) {
+        let subject = "Disc Golf Tag Challenge — \(challenge.clubName ?? "Club")"
+        var body = "Hey \(challenge.challengerName),\n\nI accept your challenge!\n\n"
+        if let loc = challenge.proposedLocation, !loc.isEmpty {
+            body += "Where: \(loc)\n"
+        }
+        if let date = challenge.proposedDate {
+            body += "When: \(date.formatted(date: .abbreviated, time: .shortened))\n"
+        }
+        body += "\nLet's lock in the details.\n"
+
+        let encSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encBody    = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:\(email)?subject=\(encSubject)&body=\(encBody)") {
+            UIApplication.shared.open(url)
         }
     }
 }
 
-// MARK: - ResolveChallengeView
+// MARK: - ChallengeRow
 
-struct ResolveChallengeView: View {
-    let challenge: Challenge
-    @EnvironmentObject var auth: AuthService
-    @Environment(\.dismiss) var dismiss
-    private let service = FirebaseService.shared
-    @State private var isSubmitting = false
+struct ChallengeRow: View {
+    let challenge:    Challenge
+    let isIncoming:   Bool
+    let isProcessing: Bool
+    let onAccept:     () async -> Void
+    let onDecline:    () async -> Void
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 32) {
-                Text("Who won?")
-                    .font(.title2.bold())
-                    .padding(.top, 24)
-
-                VStack(spacing: 12) {
-                    Button {
-                        resolve(challengerWon: true)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trophy.fill").foregroundStyle(.yellow)
-                            Text("\(challenge.challengerName) (#\(challenge.challengerTag))")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-
-                    Text("vs")
-                        .foregroundStyle(.secondary)
-
-                    Button {
-                        resolve(challengerWon: false)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trophy.fill").foregroundStyle(.yellow)
-                            Text("\(challenge.defendantName) (#\(challenge.defendantTag))")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal)
-
-                Text("If the challenger wins, tags will be swapped automatically.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Spacer()
-            }
-            .navigationTitle("Enter Result")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .overlay { if isSubmitting { ProgressView() } }
+    private var statusColor: Color {
+        switch challenge.status {
+        case .pending:   return Theme.gold
+        case .accepted:  return Theme.success
+        case .completed: return Theme.success
+        case .declined:  return .red
+        case .cancelled: return Theme.textSecondary
         }
     }
 
-    private func resolve(challengerWon: Bool) {
-        isSubmitting = true
-        Task {
-            try? await service.resolveChallenge(challenge, challengerWon: challengerWon)
-            dismiss()
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Image(systemName: isIncoming ? "arrow.down.left" : "arrow.up.right")
+                            .font(.caption)
+                            .foregroundStyle(isIncoming ? Theme.accent : Theme.gold)
+                        Text(isIncoming
+                             ? "From \(challenge.challengerName)"
+                             : "To \(challenge.defendantName)")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    if let club = challenge.clubName {
+                        Text(club).font(.caption).foregroundStyle(Theme.textSecondary)
+                    }
+                    Text(challenge.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2).foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                Text(challenge.status.rawValue.capitalized)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(statusColor.opacity(0.15), in: Capsule())
+                    .foregroundStyle(statusColor)
+            }
+
+            // Tag info
+            HStack(spacing: 8) {
+                Text("Tag #\(challenge.challengerTag)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(Theme.textSecondary)
+                Text("Tag #\(challenge.defendantTag)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            if let m = challenge.message, !m.isEmpty {
+                Text("\"\(m)\"")
+                    .font(.caption).italic()
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.background.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            if let loc = challenge.proposedLocation, !loc.isEmpty {
+                Label(loc, systemImage: "mappin.and.ellipse")
+                    .font(.caption2).foregroundStyle(Theme.textSecondary)
+            }
+            if let date = challenge.proposedDate {
+                Label(date.formatted(date: .abbreviated, time: .shortened),
+                      systemImage: "calendar")
+                    .font(.caption2).foregroundStyle(Theme.textSecondary)
+            }
+
+            // Action buttons — only for incoming pending challenges
+            if isIncoming && challenge.status == .pending {
+                HStack(spacing: 10) {
+                    Button(role: .destructive) {
+                        Task { await onDecline() }
+                    } label: {
+                        Text(isProcessing ? "" : "Decline")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .overlay { if isProcessing { ProgressView().tint(.white) } }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red.opacity(0.8))
+                    .disabled(isProcessing)
+
+                    Button {
+                        Task { await onAccept() }
+                    } label: {
+                        Label(isProcessing ? "" : "Accept & Email",
+                              systemImage: "envelope.fill")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .overlay { if isProcessing { ProgressView().tint(.white) } }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.success)
+                    .disabled(isProcessing)
+                }
+            }
         }
+        .padding(.vertical, 6)
     }
 }

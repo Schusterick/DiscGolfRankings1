@@ -18,6 +18,20 @@
 		B0010016 /* ChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010017 /* ChallengeViews.swift */; };
 		B0010090 /* GroupRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010091 /* GroupRoundViews.swift */; };
 		B0010092 /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010093 /* AdminViews.swift */; };
+		B0010094 /* PendingRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010095 /* PendingRoundViews.swift */; };
+		B0010096 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010097 /* Theme.swift */; };
+		B0010098 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010099 /* OnboardingView.swift */; };
+		B001009A /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001009B /* AdminDashboardView.swift */; };
+		B001009C /* Config.swift in Sources */           = {isa = PBXBuildFile; fileRef = B001009D /* Config.swift */; };
+		B001009E /* CloudFunctions.swift in Sources */   = {isa = PBXBuildFile; fileRef = B001009F /* CloudFunctions.swift */; };
+		B00100A0 /* StripeService.swift in Sources */    = {isa = PBXBuildFile; fileRef = B00100A1 /* StripeService.swift */; };
+		B00100A2 /* PaymentViews.swift in Sources */     = {isa = PBXBuildFile; fileRef = B00100A3 /* PaymentViews.swift */; };
+		B00100A4 /* SuperAdminView.swift in Sources */   = {isa = PBXBuildFile; fileRef = B00100A5 /* SuperAdminView.swift */; };
+		B00100A6 /* EditProfileView.swift in Sources */  = {isa = PBXBuildFile; fileRef = B00100A7 /* EditProfileView.swift */; };
+		B00100A8 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A9 /* PublicProfileView.swift */; };
+		B00100AA /* RankingEngine.swift in Sources */    = {isa = PBXBuildFile; fileRef = B00100AB /* RankingEngine.swift */; };
+		B00100AC /* EventViews.swift in Sources */       = {isa = PBXBuildFile; fileRef = B00100AD /* EventViews.swift */; };
+		B00100AE /* ClubPublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100AF /* ClubPublicProfileView.swift */; };
 		B0010018 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B0010019 /* GoogleService-Info.plist */; };
 		B001001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B001001B /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -33,6 +47,20 @@
 		B0010017 /* ChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeViews.swift; sourceTree = "<group>"; };
 		B0010091 /* GroupRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRoundViews.swift; sourceTree = "<group>"; };
 		B0010093 /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
+		B0010095 /* PendingRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingRoundViews.swift; sourceTree = "<group>"; };
+		B0010097 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		B0010099 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		B001009B /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
+		B001009D /* Config.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		B001009F /* CloudFunctions.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudFunctions.swift; sourceTree = "<group>"; };
+		B00100A1 /* StripeService.swift */    = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeService.swift; sourceTree = "<group>"; };
+		B00100A3 /* PaymentViews.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentViews.swift; sourceTree = "<group>"; };
+		B00100A5 /* SuperAdminView.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperAdminView.swift; sourceTree = "<group>"; };
+		B00100A7 /* EditProfileView.swift */  = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		B00100A9 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
+		B00100AB /* RankingEngine.swift */    = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingEngine.swift; sourceTree = "<group>"; };
+		B00100AD /* EventViews.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventViews.swift; sourceTree = "<group>"; };
+		B00100AF /* ClubPublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubPublicProfileView.swift; sourceTree = "<group>"; };
 		B0010019 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B001001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0010020 /* DiscGolfRankings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiscGolfRankings.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,6 +100,20 @@
 				B0010017 /* ChallengeViews.swift */,
 				B0010091 /* GroupRoundViews.swift */,
 				B0010093 /* AdminViews.swift */,
+				B0010095 /* PendingRoundViews.swift */,
+				B0010097 /* Theme.swift */,
+				B0010099 /* OnboardingView.swift */,
+				B001009B /* AdminDashboardView.swift */,
+				B001009D /* Config.swift */,
+				B001009F /* CloudFunctions.swift */,
+				B00100A1 /* StripeService.swift */,
+				B00100A3 /* PaymentViews.swift */,
+				B00100A5 /* SuperAdminView.swift */,
+				B00100A7 /* EditProfileView.swift */,
+				B00100A9 /* PublicProfileView.swift */,
+				B00100AB /* RankingEngine.swift */,
+				B00100AD /* EventViews.swift */,
+				B00100AF /* ClubPublicProfileView.swift */,
 				B0010019 /* GoogleService-Info.plist */,
 				B001001B /* Assets.xcassets */,
 			);
@@ -172,6 +214,20 @@
 				B0010016 /* ChallengeViews.swift in Sources */,
 				B0010090 /* GroupRoundViews.swift in Sources */,
 				B0010092 /* AdminViews.swift in Sources */,
+				B0010094 /* PendingRoundViews.swift in Sources */,
+				B0010096 /* Theme.swift in Sources */,
+				B0010098 /* OnboardingView.swift in Sources */,
+				B001009A /* AdminDashboardView.swift in Sources */,
+				B001009C /* Config.swift in Sources */,
+				B001009E /* CloudFunctions.swift in Sources */,
+				B00100A0 /* StripeService.swift in Sources */,
+				B00100A2 /* PaymentViews.swift in Sources */,
+				B00100A4 /* SuperAdminView.swift in Sources */,
+				B00100A6 /* EditProfileView.swift in Sources */,
+				B00100A8 /* PublicProfileView.swift in Sources */,
+				B00100AA /* RankingEngine.swift in Sources */,
+				B00100AC /* EventViews.swift in Sources */,
+				B00100AE /* ClubPublicProfileView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

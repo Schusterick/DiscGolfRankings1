@@ -10,34 +10,42 @@ struct AdminTabView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading && applications.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if applications.isEmpty {
-                    ContentUnavailableView(
-                        "No Pending Applications",
-                        systemImage: "checkmark.seal",
-                        description: Text("All club requests have been reviewed.")
-                    )
-                } else {
-                    List {
-                        Section("\(applications.count) Pending") {
-                            ForEach(applications) { app in
-                                ClubApplicationRowView(application: app) {
-                                    await loadApplications()
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                Group {
+                    if isLoading && applications.isEmpty {
+                        ProgressView().tint(Theme.accent)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if applications.isEmpty {
+                        ContentUnavailableView(
+                            "No Pending Applications",
+                            systemImage: "checkmark.seal",
+                            description: Text("All club requests have been reviewed.")
+                        )
+                        .foregroundStyle(Theme.textSecondary)
+                    } else {
+                        List {
+                            Section("\(applications.count) Pending") {
+                                ForEach(applications) { app in
+                                    ClubApplicationRowView(application: app) {
+                                        await loadApplications()
+                                    }
+                                    .listRowBackground(Theme.card)
+                                    .listRowSeparatorTint(Theme.divider)
                                 }
                             }
                         }
+                        .darkListStyle()
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Club Applications")
             .navigationBarTitleDisplayMode(.large)
+            .darkNavBar()
             .task { await loadApplications() }
             .refreshable { await loadApplications() }
         }
+        .preferredColorScheme(.dark)
     }
 
     private func loadApplications() async {
@@ -68,25 +76,26 @@ struct ClubApplicationRowView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(application.clubName)
                         .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
                     Text("\(application.city), \(application.state)")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(application.submittedAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(application.applicantName)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
 
             // Description — tap to expand
             Text(application.description)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .lineLimit(expanded ? nil : 2)
                 .onTapGesture { withAnimation { expanded.toggle() } }
 
@@ -94,16 +103,16 @@ struct ClubApplicationRowView: View {
             if !application.website.isEmpty {
                 Label(application.website, systemImage: "globe")
                     .font(.caption)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Theme.accent)
                     .lineLimit(1)
             }
 
             Label(application.contactEmail, systemImage: "envelope")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
 
-            Divider()
+            Divider().background(Theme.divider)
 
             // Action buttons
             HStack(spacing: 12) {
@@ -122,7 +131,7 @@ struct ClubApplicationRowView: View {
                     .padding(.vertical, 10)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.green)
+                .tint(Theme.success)
                 .disabled(isApproving || isRejecting)
 
                 Button(role: .destructive) {
@@ -140,7 +149,7 @@ struct ClubApplicationRowView: View {
                     .padding(.vertical, 10)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.red)
+                .tint(.red.opacity(0.8))
                 .disabled(isApproving || isRejecting)
             }
         }
@@ -165,9 +174,7 @@ struct ClubApplicationRowView: View {
         isApproving = true
         do {
             try await service.approveClubApplication(application)
-        } catch {
-            // failure leaves the row in place — admin can retry
-        }
+        } catch { }
         await onAction()
         isApproving = false
     }

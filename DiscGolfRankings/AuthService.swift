@@ -32,7 +32,16 @@ class AuthService: ObservableObject {
     }
 
     var isSignedIn: Bool { currentUser != nil }
-    var isAppAdmin: Bool { currentUser?.uid == FirebaseService.shared.adminUID }
+    var isAppAdmin: Bool { isSuperAdmin || currentUser?.uid == FirebaseService.shared.adminUID }
+
+    /// Hard-coded "super admin" — full control over every club, member, round, and user.
+    /// Update this list to add/remove super admins.
+    static let superAdminEmails: Set<String> = ["will@prodigydisc.com"]
+
+    var isSuperAdmin: Bool {
+        guard let email = currentUser?.email?.lowercased() else { return false }
+        return Self.superAdminEmails.contains(email)
+    }
 
     func signIn(email: String, password: String) async {
         isLoading = true
@@ -89,5 +98,11 @@ class AuthService: ObservableObject {
         } catch {
             // user doc may not exist yet for brand-new signups — ignore
         }
+    }
+
+    /// Public reload — call after editing the profile so the cached `appUser` updates.
+    func reloadAppUser() async {
+        guard let uid = currentUser?.uid else { return }
+        await fetchAppUser(uid: uid)
     }
 }
