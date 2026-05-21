@@ -805,6 +805,23 @@ class FirebaseService: ObservableObject {
         try? await sendWelcomeNotification(userId: userId,
                                            clubName: club?.name ?? "the club",
                                            tagNumber: nextTag)
+
+        // Notify club admin(s) that a new member joined
+        if let club {
+            var adminUIDs = Set<String>()
+            if !club.adminUID.isEmpty { adminUIDs.insert(club.adminUID) }
+            club.adminUserIds?.forEach { adminUIDs.insert($0) }
+            adminUIDs.remove(userId)
+            let clubName = club.name
+            for aid in adminUIDs {
+                try? await db.collection("notifications").addDocument(data: [
+                    "userId":    aid,
+                    "message":   "👤 \(userFullName) just joined \(clubName)!",
+                    "isRead":    false,
+                    "createdAt": Timestamp(date: Date())
+                ])
+            }
+        }
     }
 
     // MARK: - Stripe / Payments
@@ -972,6 +989,7 @@ class FirebaseService: ObservableObject {
     /// Updates customizable profile fields on the user document.
     /// Any nil arg is left unchanged (so callers can update one field at a time).
     func updateUserProfile(uid: String,
+                           displayName: String? = nil,
                            photoURL: String? = nil,
                            bio: String? = nil,
                            instagram: String? = nil,
@@ -979,12 +997,13 @@ class FirebaseService: ObservableObject {
                            twitter: String? = nil,
                            tiktok: String? = nil) async throws {
         var data: [String: Any] = [:]
-        if let photoURL  { data["photoURL"]  = photoURL  }
-        if let bio       { data["bio"]       = bio       }
-        if let instagram { data["instagram"] = instagram }
-        if let facebook  { data["facebook"]  = facebook  }
-        if let twitter   { data["twitter"]   = twitter   }
-        if let tiktok    { data["tiktok"]    = tiktok    }
+        if let displayName { data["displayName"] = displayName }
+        if let photoURL    { data["photoURL"]    = photoURL    }
+        if let bio         { data["bio"]         = bio         }
+        if let instagram   { data["instagram"]   = instagram   }
+        if let facebook    { data["facebook"]    = facebook    }
+        if let twitter     { data["twitter"]     = twitter     }
+        if let tiktok      { data["tiktok"]      = tiktok      }
         guard !data.isEmpty else { return }
         try await db.collection("users").document(uid).updateData(data)
     }

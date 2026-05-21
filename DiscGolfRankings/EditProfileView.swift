@@ -14,12 +14,14 @@ struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     private let service = FirebaseService.shared
 
-    @State private var photoURL:  String = ""
-    @State private var bio:       String = ""
-    @State private var instagram: String = ""
-    @State private var facebook:  String = ""
-    @State private var twitter:   String = ""
-    @State private var tiktok:    String = ""
+    @State private var firstName:  String = ""
+    @State private var lastName:   String = ""
+    @State private var photoURL:   String = ""
+    @State private var bio:        String = ""
+    @State private var instagram:  String = ""
+    @State private var facebook:   String = ""
+    @State private var twitter:    String = ""
+    @State private var tiktok:     String = ""
 
     @State private var isSaving = false
     @State private var errorMsg: String?
@@ -31,6 +33,17 @@ struct EditProfileView: View {
                 Theme.background.ignoresSafeArea()
 
                 Form {
+                    // MARK: Name
+                    Section("Name") {
+                        socialField(icon: "person.fill",
+                                    label: "First Name", placeholder: "First name",
+                                    text: $firstName)
+                        socialField(icon: "person.fill",
+                                    label: "Last Name", placeholder: "Last name",
+                                    text: $lastName)
+                    }
+                    .listRowBackground(Theme.card)
+
                     // MARK: Photo preview
                     Section {
                         VStack(spacing: 12) {
@@ -174,6 +187,10 @@ struct EditProfileView: View {
 
     private func loadCurrent() {
         let u = auth.appUser
+        let name  = u?.displayName ?? auth.currentUser?.displayName ?? ""
+        let parts = name.split(separator: " ", maxSplits: 1)
+        firstName = parts.first.map(String.init) ?? ""
+        lastName  = parts.count > 1 ? String(parts[1]) : ""
         photoURL  = u?.photoURL  ?? ""
         bio       = u?.bio       ?? ""
         instagram = u?.instagram ?? ""
@@ -185,15 +202,23 @@ struct EditProfileView: View {
     private func save() async {
         guard let uid = auth.currentUser?.uid else { return }
         isSaving = true; errorMsg = nil
+        let fullName = [firstName, lastName]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
         do {
+            if !fullName.isEmpty {
+                try? await auth.updateDisplayName(fullName)
+            }
             try await service.updateUserProfile(
                 uid: uid,
-                photoURL:  photoURL.trimmingCharacters(in: .whitespaces),
-                bio:       bio.trimmingCharacters(in: .whitespaces),
-                instagram: instagram.trimmingCharacters(in: .whitespaces),
-                facebook:  facebook.trimmingCharacters(in: .whitespaces),
-                twitter:   twitter.trimmingCharacters(in: .whitespaces),
-                tiktok:    tiktok.trimmingCharacters(in: .whitespaces)
+                displayName: fullName.isEmpty ? nil : fullName,
+                photoURL:    photoURL.trimmingCharacters(in: .whitespaces),
+                bio:         bio.trimmingCharacters(in: .whitespaces),
+                instagram:   instagram.trimmingCharacters(in: .whitespaces),
+                facebook:    facebook.trimmingCharacters(in: .whitespaces),
+                twitter:     twitter.trimmingCharacters(in: .whitespaces),
+                tiktok:      tiktok.trimmingCharacters(in: .whitespaces)
             )
             await auth.reloadAppUser()
             showSaved = true
