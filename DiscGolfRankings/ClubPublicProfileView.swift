@@ -15,12 +15,21 @@ struct ClubPublicProfileView: View {
     @State private var admin:           AppUser?
     @State private var events:          [Event] = []
     @State private var amMember:        Bool    = false
+    @State private var membership:      Membership?
     @State private var pendingRequest:  JoinRequest?
     @State private var isLoading        = false
     @State private var isJoining        = false
     @State private var openEvent:       Event?
     @State private var showPaymentView  = false
+    @State private var showAdminDash    = false
     @State private var joinErrorMsg:    String?
+
+    private var isCurrentUserAdmin: Bool {
+        guard let uid = auth.currentUser?.uid else { return false }
+        return membership?.isAdmin == true
+            || club.adminUID == uid
+            || club.adminUserIds?.contains(uid) == true
+    }
 
     private var feeLabel: String {
         if let fee = club.joinFee, fee > 0 {
@@ -70,9 +79,16 @@ struct ClubPublicProfileView: View {
                     Button("Close") { dismiss() }.foregroundStyle(Theme.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    if let url = shareURL {
-                        ShareLink(item: url, message: Text(shareText)) {
-                            Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
+                    HStack(spacing: 16) {
+                        if isCurrentUserAdmin {
+                            Button { showAdminDash = true } label: {
+                                Image(systemName: "gear").foregroundStyle(Theme.gold)
+                            }
+                        }
+                        if let url = shareURL {
+                            ShareLink(item: url, message: Text(shareText)) {
+                                Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
+                            }
                         }
                     }
                 }
@@ -84,6 +100,9 @@ struct ClubPublicProfileView: View {
             }
             .sheet(isPresented: $showPaymentView, onDismiss: { Task { await load() } }) {
                 PaymentPreviewView(club: club).environmentObject(auth)
+            }
+            .sheet(isPresented: $showAdminDash) {
+                AdminDashboardView(club: club).environmentObject(auth)
             }
         }
         .preferredColorScheme(.dark)
@@ -387,6 +406,7 @@ struct ClubPublicProfileView: View {
             async let mFetch = service.fetchMembership(userId: me, clubId: clubId)
             async let rFetch = service.checkJoinRequest(userId: me, clubId: clubId)
             let m = try? await mFetch
+            membership = m
             amMember = m != nil
             pendingRequest = try? await rFetch
         }
