@@ -78,17 +78,17 @@ struct ClubPublicProfileView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }.foregroundStyle(Theme.accent)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 16) {
-                        if isCurrentUserAdmin {
-                            Button { showAdminDash = true } label: {
-                                Image(systemName: "gear").foregroundStyle(Theme.gold)
-                            }
+                if isCurrentUserAdmin {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showAdminDash = true } label: {
+                            Image(systemName: "gear").foregroundStyle(Theme.gold)
                         }
-                        if let url = shareURL {
-                            ShareLink(item: url, message: Text(shareText)) {
-                                Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
-                            }
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    if let url = shareURL {
+                        ShareLink(item: url, message: Text(shareText)) {
+                            Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
                         }
                     }
                 }
