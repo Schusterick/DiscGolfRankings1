@@ -494,7 +494,8 @@ struct ClubSearchView: View {
               let uid = auth.currentUser?.uid else { return }
 
         if let fee = club.joinFee, fee > 0 {
-            // Paid club — launch Stripe payment flow
+            // Paid club — launch Stripe payment flow.
+            // Success haptic fires when PaymentPreviewView reports completion.
             paymentClub     = club
             showPaymentView = true
         } else {
@@ -506,6 +507,7 @@ struct ClubSearchView: View {
                                         clubId: clubId, userEmail: email)
             memberships = (try? await service.fetchUserMemberships(userId: uid)) ?? []
             joiningClubId = nil
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
     }
 }

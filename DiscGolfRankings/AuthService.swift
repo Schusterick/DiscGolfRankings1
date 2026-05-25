@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import FirebaseAuth
 import FirebaseFirestore
 import AuthenticationServices
@@ -52,6 +53,7 @@ class AuthService: ObservableObject {
             try await Auth.auth().signIn(withEmail: email, password: password)
         } catch {
             errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         isLoading = false
     }
@@ -74,6 +76,7 @@ class AuthService: ObservableObject {
             try db.collection("users").document(result.user.uid).setData(from: newUser)
         } catch {
             errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         isLoading = false
     }
@@ -89,6 +92,7 @@ class AuthService: ObservableObject {
             try await Auth.auth().sendPasswordReset(withEmail: email)
         } catch {
             errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         isLoading = false
     }
@@ -119,6 +123,7 @@ class AuthService: ObservableObject {
         switch result {
         case .failure(let error):
             errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
             return
         case .success(let auth):
             guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
@@ -127,6 +132,7 @@ class AuthService: ObservableObject {
                   let tokenString = String(data: identityToken, encoding: .utf8)
             else {
                 errorMessage = "Couldn't read Apple credential."
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
                 return
             }
             do {
@@ -160,6 +166,7 @@ class AuthService: ObservableObject {
                 }
             } catch {
                 errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
             pendingAppleNonce = nil
         }

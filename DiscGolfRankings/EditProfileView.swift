@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import FirebaseAuth
 
 // MARK: - EditProfileView
@@ -301,6 +302,7 @@ struct EditProfileView: View {
             errorMsg = "For security, please sign out and back in before changing your email."
         } catch {
             errorMsg = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         isSaving = false
     }

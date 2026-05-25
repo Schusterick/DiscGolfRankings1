@@ -33,7 +33,11 @@ struct PaymentPreviewView: View {
                     MockCardPaymentView(
                         club: club,
                         amount: joinFee,
-                        onSuccess: { tag in tagNumber = tag; step = .success },
+                        onSuccess: { tag in
+                            tagNumber = tag
+                            step = .success
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        },
                         onCancel:  { step = .preview }
                     )
                     .environmentObject(auth)

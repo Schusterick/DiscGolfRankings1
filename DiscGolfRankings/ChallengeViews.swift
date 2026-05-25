@@ -139,8 +139,10 @@ struct SendChallengeView: View {
         do {
             _ = try await service.sendChallenge(challenge)
             showSuccess = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         } catch {
             errorMsg = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         isSending = false
     }

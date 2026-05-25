@@ -137,6 +137,9 @@ struct PendingRoundsView: View {
         try? await service.respondToPendingRound(roundId: roundId, userId: myUID, confirmed: confirmed)
         await load()
         respondingRoundId = nil
+        if confirmed {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
     }
 }
 
