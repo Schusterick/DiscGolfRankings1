@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("onboardingIntent")  private var onboardingIntent  = ""   // "browse" | "request"
     @State private var page = 0
 
     var body: some View {
@@ -133,7 +134,10 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 14) {
-                Button { hasSeenOnboarding = true } label: {
+                Button {
+                    onboardingIntent  = "browse"
+                    hasSeenOnboarding = true
+                } label: {
                     Text("Browse Clubs")
                         .font(.headline)
                         .foregroundStyle(.white)
@@ -142,7 +146,10 @@ struct OnboardingView: View {
                         .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
                 }
 
-                Button { hasSeenOnboarding = true } label: {
+                Button {
+                    onboardingIntent  = "request"
+                    hasSeenOnboarding = true
+                } label: {
                     Text("Request a Club")
                         .font(.headline)
                         .foregroundStyle(Theme.accent)

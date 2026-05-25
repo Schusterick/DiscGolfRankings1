@@ -37,6 +37,8 @@ struct DiscGolfRankingsApp: App {
 struct MainTabView: View {
     @EnvironmentObject var auth: AuthService
     @State private var selectedTab = 0
+    @AppStorage("onboardingIntent") private var onboardingIntent = ""
+    @State private var showRequestClubFromIntent = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -60,6 +62,17 @@ struct MainTabView: View {
             }
         }
         .tint(Theme.accent)
+        .onAppear {
+            // Honor onboarding intent — if the user tapped "Request a Club" on the
+            // last page of onboarding, drop them straight into the request form.
+            if onboardingIntent == "request" {
+                showRequestClubFromIntent = true
+            }
+            onboardingIntent = ""           // clear so it only fires once
+        }
+        .sheet(isPresented: $showRequestClubFromIntent) {
+            RequestClubView().environmentObject(auth)
+        }
     }
 }
 
