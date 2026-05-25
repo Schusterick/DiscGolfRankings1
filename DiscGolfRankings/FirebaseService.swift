@@ -602,6 +602,14 @@ class FirebaseService: ObservableObject {
         try await batch.commit()
     }
 
+    /// Marks a single notification doc as read. Used when the user taps a single row.
+    func markNotificationRead(id: String?, userId: String) async throws {
+        guard let id else { return }
+        try await db.collection("notifications").document(id)
+            .updateData(["isRead": true])
+        _ = userId   // userId reserved in case we tighten rules later
+    }
+
     func sendWelcomeNotification(userId: String, clubName: String, tagNumber: Int) async throws {
         let data: [String: Any] = [
             "userId":    userId,

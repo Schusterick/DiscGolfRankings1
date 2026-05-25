@@ -279,20 +279,25 @@ struct NotificationsView: View {
                             .foregroundStyle(Theme.textSecondary)
                     } else {
                         List(notifications) { n in
-                            HStack(spacing: 12) {
-                                Circle()
-                                    .fill(n.isRead ? Theme.divider : Theme.accent)
-                                    .frame(width: 8, height: 8)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(n.message)
-                                        .font(.subheadline)
-                                        .foregroundStyle(n.isRead ? Theme.textSecondary : Theme.textPrimary)
-                                    Text(n.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption2)
-                                        .foregroundStyle(Theme.textSecondary)
+                            Button { Task { await tap(n) } } label: {
+                                HStack(spacing: 12) {
+                                    Circle()
+                                        .fill(n.isRead ? Theme.divider : Theme.accent)
+                                        .frame(width: 8, height: 8)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(n.message)
+                                            .font(.subheadline)
+                                            .foregroundStyle(n.isRead ? Theme.textSecondary : Theme.textPrimary)
+                                        Text(n.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                            .font(.caption2)
+                                            .foregroundStyle(Theme.textSecondary)
+                                    }
+                                    Spacer()
                                 }
+                                .padding(.vertical, 4)
+                                .contentShape(.rect)
                             }
-                            .padding(.vertical, 4)
+                            .buttonStyle(.plain)
                             .listRowBackground(Theme.card)
                             .listRowSeparatorTint(Theme.divider)
                         }
@@ -304,8 +309,16 @@ struct NotificationsView: View {
             .navigationBarTitleDisplayMode(.large)
             .darkNavBar()
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }.foregroundStyle(Theme.accent)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    if notifications.contains(where: { !$0.isRead }) {
+                        Button { Task { await markAllRead() } } label: {
+                            Text("Mark All Read").font(.subheadline).foregroundStyle(Theme.accent)
+                        }
+                        .accessibilityLabel("Mark all notifications as read")
+                    }
                 }
             }
             .task { await load() }
@@ -317,8 +330,27 @@ struct NotificationsView: View {
         guard let uid = auth.currentUser?.uid else { return }
         isLoading = true
         notifications = (try? await service.fetchNotifications(userId: uid)) ?? []
-        try? await service.markAllNotificationsRead(userId: uid)
+        // NOTE: read-state is no longer auto-flipped on view appear — the user
+        // explicitly marks rows read by tapping them (or all via the toolbar).
         isLoading = false
+    }
+
+    /// Per-row tap — flips just that notification to read, optimistically updating
+    /// the local array so the dot greys out immediately.
+    private func tap(_ n: AppNotification) async {
+        guard let uid = auth.currentUser?.uid, !n.isRead else { return }
+        if let idx = notifications.firstIndex(where: { $0.id == n.id }) {
+            notifications[idx].isRead = true
+        }
+        try? await service.markNotificationRead(id: n.id, userId: uid)
+    }
+
+    /// "Mark All Read" toolbar action.
+    private func markAllRead() async {
+        guard let uid = auth.currentUser?.uid else { return }
+        // Optimistic local update
+        notifications = notifications.map { var n = $0; n.isRead = true; return n }
+        try? await service.markAllNotificationsRead(userId: uid)
     }
 }
 
