@@ -377,51 +377,57 @@ struct ProfileView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            // Challenges (with pending-count badge)
-            Button { showChallenges = true } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "flag.checkered")
-                    Text("Challenges")
-                    if pendingChallengeCount > 0 {
-                        Text("\(pendingChallengeCount)")
-                            .font(.caption2.bold())
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(Theme.accent, in: Capsule())
-                            .foregroundStyle(.white)
+            // 2×2 grid of primary actions
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
+                      spacing: 10) {
+                // Challenges (with badge)
+                Button { showChallenges = true } label: {
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "flag.checkered")
+                            Text("Challenges")
+                            if pendingChallengeCount > 0 {
+                                Text("\(pendingChallengeCount)")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(Theme.accent, in: Capsule())
+                                    .foregroundStyle(.white)
+                            }
+                        }
                     }
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
                 }
-                .font(.subheadline.bold())
-                .foregroundStyle(Theme.accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
-            }
 
-            Button { showEditProfile = true } label: {
-                Label("Edit Profile", systemImage: "pencil.circle")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Theme.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
-            }
+                Button { showEditProfile = true } label: {
+                    Label("Edit Profile", systemImage: "pencil.circle")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
+                }
 
-            Button { showClubSearch = true } label: {
-                Label("Search for Clubs", systemImage: "magnifyingglass")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Theme.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
-            }
+                Button { showClubSearch = true } label: {
+                    Label("Search", systemImage: "magnifyingglass")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
+                }
 
-            Button { showClubRequest = true } label: {
-                Label("Request a Club", systemImage: "plus.circle")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Theme.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
+                Button { showClubRequest = true } label: {
+                    Label("Request", systemImage: "plus.circle")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent, lineWidth: 1.5))
+                }
             }
 
             Button(role: .destructive) { auth.signOut() } label: {
