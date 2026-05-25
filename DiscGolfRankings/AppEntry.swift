@@ -268,6 +268,8 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Edit profile")
+            .accessibilityHint("Opens your profile editor")
 
             // Your own email is shown to you only (private — never shown on PublicProfileView)
             Text(auth.currentUser?.email ?? "")

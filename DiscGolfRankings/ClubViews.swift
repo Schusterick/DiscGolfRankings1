@@ -61,6 +61,9 @@ struct HomeView: View {
                             }
                         }
                     }
+                    .accessibilityLabel(unreadCount > 0
+                        ? "Notifications, \(unreadCount) unread"
+                        : "Notifications")
                 }
             }
             .task { await loadData() }
@@ -240,6 +243,7 @@ struct ClubCardView: View {
                             .padding(12)
                             .background(Theme.cardAlt, in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .accessibilityLabel("Share \(item.club.name)")
                 }
 
                 // Admin gear
@@ -250,6 +254,7 @@ struct ClubCardView: View {
                             .padding(12)
                             .background(Theme.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .accessibilityLabel("\(item.club.name) admin dashboard")
                 }
             }
         }
@@ -733,6 +738,7 @@ struct LeaderboardView: View {
                     if let club = selectedClub {
                         Button { clubProfileTarget = club } label: {
                             Image(systemName: "info.circle").foregroundStyle(Theme.accent)
+                                .accessibilityLabel("About \(club.name)")
                         }
                     }
                 }
