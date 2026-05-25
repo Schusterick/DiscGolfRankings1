@@ -38,7 +38,9 @@ struct HomeView: View {
                                          onAdminDash:   { adminClub   = item.club },
                                          onViewProfile: { profileClub = item.club })
                         }
-                        searchButton
+                        // Search only when the user has zero memberships — otherwise
+                        // it duplicates the Profile tab's Search button.
+                        if clubMemberships.isEmpty { searchButton }
                     }
                     .padding()
                 }
