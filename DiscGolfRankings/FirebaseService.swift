@@ -884,6 +884,23 @@ class FirebaseService: ObservableObject {
         try? await sendWelcomeNotification(userId: userId,
                                            clubName: club?.name ?? "the club",
                                            tagNumber: nextTag)
+
+        // Notify club admin(s) that a new member joined
+        if let club {
+            var adminUIDs = Set<String>()
+            if !club.adminUID.isEmpty { adminUIDs.insert(club.adminUID) }
+            club.adminUserIds?.forEach { adminUIDs.insert($0) }
+            adminUIDs.remove(userId)
+            let clubName = club.name
+            for aid in adminUIDs {
+                try? await db.collection("notifications").addDocument(data: [
+                    "userId":    aid,
+                    "message":   "👤 \(userFullName) just joined \(clubName)!",
+                    "isRead":    false,
+                    "createdAt": Timestamp(date: Date())
+                ])
+            }
+        }
     }
 
     // MARK: - Stripe / Payments

@@ -216,4 +216,11 @@ class AuthService: ObservableObject {
         guard let uid = currentUser?.uid else { return }
         await fetchAppUser(uid: uid)
     }
+
+    func updateDisplayName(_ name: String) async throws {
+        guard let user = currentUser, !name.isEmpty else { return }
+        let req = user.createProfileChangeRequest()
+        req.displayName = name
+        try await req.commitChanges()
+    }
 }

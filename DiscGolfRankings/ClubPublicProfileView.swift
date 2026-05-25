@@ -28,7 +28,15 @@ struct ClubPublicProfileView: View {
     @State private var openEvent:       Event?
     @State private var showAdmin        = false
     @State private var showPaymentView  = false
+    @State private var showAdminDash    = false
     @State private var joinErrorMsg:    String?
+
+    private var isCurrentUserAdmin: Bool {
+        guard let uid = auth.currentUser?.uid else { return false }
+        return membership?.isAdmin == true
+            || club.adminUID == uid
+            || club.adminUserIds?.contains(uid) == true
+    }
 
     private var feeLabel: String {
         if let fee = club.joinFee, fee > 0 {
@@ -74,6 +82,13 @@ struct ClubPublicProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }.foregroundStyle(Theme.accent)
+                }
+                if isCurrentUserAdmin {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showAdminDash = true } label: {
+                            Image(systemName: "gear").foregroundStyle(Theme.gold)
+                        }
+                    }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 14) {
@@ -437,6 +452,7 @@ struct ClubPublicProfileView: View {
             async let mFetch = service.fetchMembership(userId: me, clubId: clubId)
             async let rFetch = service.checkJoinRequest(userId: me, clubId: clubId)
             let m = try? await mFetch
+            membership = m
             amMember = m != nil
             pendingRequest = try? await rFetch
 
