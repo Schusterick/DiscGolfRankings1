@@ -542,6 +542,14 @@ struct RequestClubView: View {
     @Environment(\.dismiss) private var dismiss
     private let service = FirebaseService.shared
 
+    /// 50 US state abbreviations + DC, alphabetical. "Other" is appended in the Picker.
+    static let usStates: [String] = [
+        "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
+        "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH",
+        "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+        "VT","VA","WA","WV","WI","WY"
+    ]
+
     @State private var clubName     = ""
     @State private var city         = ""
     @State private var state        = ""
@@ -567,7 +575,14 @@ struct RequestClubView: View {
                     Section("Club Info") {
                         TextField("Club Name *", text: $clubName).foregroundStyle(Theme.textPrimary)
                         TextField("City *", text: $city).foregroundStyle(Theme.textPrimary)
-                        TextField("State *", text: $state).foregroundStyle(Theme.textPrimary)
+                        Picker("State *", selection: $state) {
+                            Text("Select…").tag("")
+                            ForEach(Self.usStates, id: \.self) { Text($0).tag($0) }
+                            Text("Other").tag("Other")
+                        }
+                        .pickerStyle(.menu)
+                        .tint(Theme.accent)
+                        .foregroundStyle(Theme.textPrimary)
                     }
                     .listRowBackground(Theme.card)
 
