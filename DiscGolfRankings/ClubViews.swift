@@ -525,6 +525,9 @@ struct ClubSearchRowView: View {
     private var hasFee: Bool { (club.joinFee ?? 0) > 0 }
 
     var body: some View {
+        // The whole row's empty area calls onInfo(). The Join button (a SwiftUI
+        // Button) sits on top and captures its own tap before the gesture fires —
+        // so tapping it routes to onJoin(), not onInfo().
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(club.name)
@@ -541,18 +544,8 @@ struct ClubSearchRowView: View {
                         Text("• Free")
                             .font(.caption).foregroundStyle(Theme.success)
                     }
-                }
-                if let onInfo {
-                    Button { onInfo() } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "info.circle")
-                            Text("View profile")
-                        }
-                        .font(.caption2.bold())
-                        .foregroundStyle(Theme.accent)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             }
             Spacer()
@@ -596,9 +589,12 @@ struct ClubSearchRowView: View {
                     }
                 }
                 .disabled(isJoining)
+                .buttonStyle(.borderless)        // ensures the button consumes its tap
             }
         }
         .padding(.vertical, 6)
+        .contentShape(.rect)                     // make the whole row hit-testable
+        .onTapGesture { onInfo?() }
     }
 }
 
