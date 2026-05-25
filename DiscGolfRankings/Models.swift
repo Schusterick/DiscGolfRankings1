@@ -10,16 +10,19 @@ struct AppUser: Identifiable, Codable {
     var createdAt: Date
 
     // Customization (all optional — older user docs predate these)
-    var photoURL:  String?
-    var bio:       String?
-    var instagram: String?
-    var facebook:  String?
-    var twitter:   String?
-    var tiktok:    String?
+    var photoURL:        String?
+    var bio:             String?
+    var instagram:       String?
+    var facebook:        String?
+    var twitter:         String?
+    var tiktok:          String?
+    var favoriteCourse:  String?    // e.g. "Maple Hill"
+    var yearsPlaying:    Int?       // 0..50
 
     enum CodingKeys: String, CodingKey {
         case id, email, displayName, createdAt
         case photoURL, bio, instagram, facebook, twitter, tiktok
+        case favoriteCourse, yearsPlaying
     }
 }
 
@@ -43,10 +46,17 @@ struct Club: Identifiable, Codable, Hashable {
     // Public-profile contact details
     var contactEmail: String?
     var contactPhone: String?
+    // Public-profile visual customization
+    var logoURL:      String?
+    var foundedYear:  Int?
     // Stripe / payments
     var stripeConnectedAccountId: String?
     var paymentsEnabled: Bool?
     var totalRevenue: Double?
+    // Hybrid subscription model (free trial → $50/year)
+    var subscriptionStatus:     String?    // "trial" | "active" | "expired" | "cancelled"
+    var subscriptionStartedAt:  Date?
+    var subscriptionExpiresAt:  Date?
 
     enum ClubStatus: String, Codable, CaseIterable, Hashable {
         case pending  = "pending"
@@ -60,7 +70,9 @@ struct Club: Identifiable, Codable, Hashable {
         case tagFee, setupFee, memberCount, createdAt
         case missionStatement, adminUserIds, joinFee, website
         case contactEmail, contactPhone
+        case logoURL, foundedYear
         case stripeConnectedAccountId, paymentsEnabled, totalRevenue
+        case subscriptionStatus, subscriptionStartedAt, subscriptionExpiresAt
         case city, state, isApproved   // legacy field names
     }
 
@@ -99,7 +111,12 @@ struct Club: Identifiable, Codable, Hashable {
         website                 = try? c.decode(String.self,   forKey: .website)
         contactEmail            = try? c.decode(String.self,   forKey: .contactEmail)
         contactPhone            = try? c.decode(String.self,   forKey: .contactPhone)
+        logoURL                 = try? c.decode(String.self,   forKey: .logoURL)
+        foundedYear             = try? c.decode(Int.self,      forKey: .foundedYear)
         stripeConnectedAccountId = try? c.decode(String.self,  forKey: .stripeConnectedAccountId)
+        subscriptionStatus       = try? c.decode(String.self,  forKey: .subscriptionStatus)
+        subscriptionStartedAt    = try? c.decode(Date.self,    forKey: .subscriptionStartedAt)
+        subscriptionExpiresAt    = try? c.decode(Date.self,    forKey: .subscriptionExpiresAt)
         paymentsEnabled         = try? c.decode(Bool.self,     forKey: .paymentsEnabled)
         totalRevenue            = try? c.decode(Double.self,   forKey: .totalRevenue)
     }
@@ -120,9 +137,14 @@ struct Club: Identifiable, Codable, Hashable {
         try c.encodeIfPresent(website,                  forKey: .website)
         try c.encodeIfPresent(contactEmail,             forKey: .contactEmail)
         try c.encodeIfPresent(contactPhone,             forKey: .contactPhone)
+        try c.encodeIfPresent(logoURL,                  forKey: .logoURL)
+        try c.encodeIfPresent(foundedYear,              forKey: .foundedYear)
         try c.encodeIfPresent(stripeConnectedAccountId, forKey: .stripeConnectedAccountId)
         try c.encodeIfPresent(paymentsEnabled,          forKey: .paymentsEnabled)
         try c.encodeIfPresent(totalRevenue,             forKey: .totalRevenue)
+        try c.encodeIfPresent(subscriptionStatus,       forKey: .subscriptionStatus)
+        try c.encodeIfPresent(subscriptionStartedAt,    forKey: .subscriptionStartedAt)
+        try c.encodeIfPresent(subscriptionExpiresAt,    forKey: .subscriptionExpiresAt)
     }
 
     init(name: String, location: String, adminUID: String,
@@ -134,7 +156,10 @@ struct Club: Identifiable, Codable, Hashable {
          website: String? = nil,
          stripeConnectedAccountId: String? = nil,
          paymentsEnabled: Bool? = nil,
-         totalRevenue: Double? = nil) {
+         totalRevenue: Double? = nil,
+         subscriptionStatus: String? = nil,
+         subscriptionStartedAt: Date? = nil,
+         subscriptionExpiresAt: Date? = nil) {
         self.name = name; self.location = location; self.adminUID = adminUID
         self.status = status; self.tagFee = tagFee; self.setupFee = setupFee
         self.memberCount = memberCount; self.createdAt = createdAt
@@ -145,6 +170,78 @@ struct Club: Identifiable, Codable, Hashable {
         self.stripeConnectedAccountId = stripeConnectedAccountId
         self.paymentsEnabled = paymentsEnabled
         self.totalRevenue = totalRevenue
+        self.subscriptionStatus = subscriptionStatus
+        self.subscriptionStartedAt = subscriptionStartedAt
+        self.subscriptionExpiresAt = subscriptionExpiresAt
+    }
+
+    // MARK: - Subscription helper
+
+    /// Computes the live subscription state for this club based on the dates stored.
+    /// Falls back to `.trial` (with a 6-month grace period from `createdAt`) for
+    /// legacy docs that don't have subscription fields yet — so existing clubs are
+    /// grandfathered into the trial automatically.
+    enum SubscriptionState {
+        case trial(daysRemaining: Int)
+        case active(daysUntilRenewal: Int)
+        case expiringSoon(daysUntilExpire: Int)
+        case expired
+        case cancelled
+
+        var isUsable: Bool {
+            switch self {
+            case .trial, .active, .expiringSoon: return true
+            case .expired, .cancelled:           return false
+            }
+        }
+        var label: String {
+            switch self {
+            case .trial(let d):         return d == 1 ? "1 day left in free trial" : "\(d) days left in free trial"
+            case .active(let d):        return "Renews in \(d) day\(d == 1 ? "" : "s")"
+            case .expiringSoon(let d):  return "Expires in \(d) day\(d == 1 ? "" : "s")"
+            case .expired:              return "Subscription expired"
+            case .cancelled:            return "Subscription cancelled"
+            }
+        }
+    }
+
+    /// Live subscription state computed from stored dates + Config constants.
+    var subscriptionState: SubscriptionState {
+        let now = Date()
+        // Explicitly-cancelled clubs
+        if subscriptionStatus == "cancelled" { return .cancelled }
+
+        // Determine the effective expiration date
+        let effectiveExpiry: Date = subscriptionExpiresAt
+            ?? Calendar.current.date(byAdding: .day, value: Config.clubTrialDurationDays,
+                                     to: subscriptionStartedAt ?? createdAt)
+            ?? createdAt
+
+        let daysLeft = Calendar.current.dateComponents([.day], from: now,
+                                                       to: effectiveExpiry).day ?? 0
+
+        if daysLeft < 0 { return .expired }
+
+        // If never explicitly marked "active", treat as trial
+        if subscriptionStatus != "active" {
+            return .trial(daysRemaining: daysLeft)
+        }
+        if daysLeft <= Config.renewalWarningWindowDays {
+            return .expiringSoon(daysUntilExpire: daysLeft)
+        }
+        return .active(daysUntilRenewal: daysLeft)
+    }
+
+    /// True while the trial is active — used to skip the platform fee on member transactions.
+    var isInFreeTrial: Bool {
+        if case .trial = subscriptionState { return true }
+        return false
+    }
+
+    /// Platform fee actually applied to a member-fee transaction.
+    /// Zero during the free trial — clubs keep 100% of their members' payments for 6 months.
+    var effectivePlatformFeeRate: Double {
+        isInFreeTrial ? 0.0 : Config.stripePlatformFee
     }
 }
 

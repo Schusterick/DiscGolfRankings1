@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth
+import FirebaseStorage
 
 @MainActor
 class FirebaseService: ObservableObject {
@@ -212,6 +213,10 @@ class FirebaseService: ObservableObject {
 
     func approveClubApplication(_ application: ClubApplication) async throws {
         guard let appId = application.id else { return }
+        let now = Date()
+        let trialEnd = Calendar.current.date(byAdding: .day,
+                                             value: Config.clubTrialDurationDays,
+                                             to: now) ?? now
         let club = Club(
             name: application.clubName,
             location: "\(application.city), \(application.state)",
@@ -220,11 +225,73 @@ class FirebaseService: ObservableObject {
             tagFee: 0,
             setupFee: 0,
             memberCount: 0,
-            createdAt: Date()
+            createdAt: now,
+            // Auto-grant a 6-month free trial when the club is approved
+            subscriptionStatus:    "trial",
+            subscriptionStartedAt: now,
+            subscriptionExpiresAt: trialEnd
         )
         try db.collection("clubs").addDocument(from: club)
         try await db.collection("clubApplications").document(appId)
             .updateData(["status": "approved"])
+    }
+
+    // MARK: - Club subscriptions (hybrid pricing model)
+
+    /// Marks a club's subscription as paid + active for one year.
+    /// In production this is called from a backend webhook after the Stripe Checkout
+    /// payment confirms. For now (no backend wired up) the iOS app calls this directly
+    /// from the placeholder payment flow — replace with a Cloud Function trigger later.
+    func activateClubSubscription(clubId: String) async throws {
+        let now = Date()
+        let renewalDate = Calendar.current.date(byAdding: .year, value: 1, to: now) ?? now
+        try await db.collection("clubs").document(clubId).updateData([
+            "subscriptionStatus":     "active",
+            "subscriptionStartedAt":  Timestamp(date: now),
+            "subscriptionExpiresAt":  Timestamp(date: renewalDate)
+        ])
+    }
+
+    /// Cancels a club's subscription. Doesn't delete data — just flips the flag so
+    /// admins are blocked from creating new events / broadcasts / etc.
+    func cancelClubSubscription(clubId: String) async throws {
+        try await db.collection("clubs").document(clubId).updateData([
+            "subscriptionStatus": "cancelled"
+        ])
+    }
+
+    /// Super-admin helper: gives EVERY club a fresh free trial starting today.
+    /// Useful at launch to grandfather all existing clubs into the new pricing model.
+    /// Returns the number of clubs updated.
+    @discardableResult
+    func resetTrialsForAllClubs() async throws -> Int {
+        let snap = try await db.collection("clubs").getDocuments()
+        let now = Date()
+        let trialEnd = Calendar.current.date(byAdding: .day,
+                                             value: Config.clubTrialDurationDays,
+                                             to: now) ?? now
+        let batch = db.batch()
+        for doc in snap.documents {
+            batch.updateData([
+                "subscriptionStatus":    "trial",
+                "subscriptionStartedAt": Timestamp(date: now),
+                "subscriptionExpiresAt": Timestamp(date: trialEnd)
+            ], forDocument: doc.reference)
+        }
+        try await batch.commit()
+        return snap.documents.count
+    }
+
+    /// Super-admin helper: extend a club's subscription by N days (e.g. comping a club).
+    func extendClubSubscription(clubId: String, days: Int) async throws {
+        let docSnap = try await db.collection("clubs").document(clubId).getDocument()
+        guard let club = try? docSnap.data(as: Club.self) else { return }
+        let base = club.subscriptionExpiresAt ?? Date()
+        let newExpiry = Calendar.current.date(byAdding: .day, value: days, to: base) ?? base
+        try await db.collection("clubs").document(clubId).updateData([
+            "subscriptionExpiresAt": Timestamp(date: newExpiry),
+            "subscriptionStatus":    "active"
+        ])
     }
 
     func rejectClubApplication(_ applicationId: String) async throws {
@@ -428,7 +495,9 @@ class FirebaseService: ObservableObject {
     func updateClub(clubId: String, name: String, location: String,
                     joinFee: Double, missionStatement: String, website: String,
                     contactEmail: String? = nil,
-                    contactPhone: String? = nil) async throws {
+                    contactPhone: String? = nil,
+                    logoURL: String? = nil,
+                    foundedYear: Int? = nil) async throws {
         var data: [String: Any] = [
             "name":             name,
             "location":         location,
@@ -438,6 +507,8 @@ class FirebaseService: ObservableObject {
         ]
         if let contactEmail { data["contactEmail"] = contactEmail }
         if let contactPhone { data["contactPhone"] = contactPhone }
+        if let logoURL      { data["logoURL"]      = logoURL      }
+        if let foundedYear  { data["foundedYear"]  = foundedYear  }
         try await db.collection("clubs").document(clubId).updateData(data)
     }
 
@@ -972,21 +1043,66 @@ class FirebaseService: ObservableObject {
     /// Updates customizable profile fields on the user document.
     /// Any nil arg is left unchanged (so callers can update one field at a time).
     func updateUserProfile(uid: String,
+                           displayName: String? = nil,
                            photoURL: String? = nil,
                            bio: String? = nil,
                            instagram: String? = nil,
                            facebook: String? = nil,
                            twitter: String? = nil,
-                           tiktok: String? = nil) async throws {
+                           tiktok: String? = nil,
+                           favoriteCourse: String? = nil,
+                           yearsPlaying: Int? = nil) async throws {
         var data: [String: Any] = [:]
-        if let photoURL  { data["photoURL"]  = photoURL  }
-        if let bio       { data["bio"]       = bio       }
-        if let instagram { data["instagram"] = instagram }
-        if let facebook  { data["facebook"]  = facebook  }
-        if let twitter   { data["twitter"]   = twitter   }
-        if let tiktok    { data["tiktok"]    = tiktok    }
+        if let displayName    { data["displayName"]    = displayName }
+        if let photoURL       { data["photoURL"]       = photoURL  }
+        if let bio            { data["bio"]            = bio       }
+        if let instagram      { data["instagram"]      = instagram }
+        if let facebook       { data["facebook"]       = facebook  }
+        if let twitter        { data["twitter"]        = twitter   }
+        if let tiktok         { data["tiktok"]         = tiktok    }
+        if let favoriteCourse { data["favoriteCourse"] = favoriteCourse }
+        if let yearsPlaying   { data["yearsPlaying"]   = yearsPlaying }
         guard !data.isEmpty else { return }
-        try await db.collection("users").document(uid).updateData(data)
+
+        // Make sure baseline fields (email, createdAt) exist so older accounts
+        // without a users/{uid} doc get one created on first profile save.
+        let ref = db.collection("users").document(uid)
+        let existing = try? await ref.getDocument()
+        if existing?.exists != true {
+            data["email"]     = Auth.auth().currentUser?.email ?? ""
+            data["createdAt"] = Timestamp(date: Date())
+        }
+        try await ref.setData(data, merge: true)
+    }
+
+    /// Updates the Firebase Auth displayName so it stays in sync with the Firestore doc.
+    /// Returns silently if the Auth user is gone (signed out mid-edit).
+    func updateAuthDisplayName(_ newName: String) async throws {
+        guard let user = Auth.auth().currentUser else { return }
+        let change = user.createProfileChangeRequest()
+        change.displayName = newName
+        try await change.commitChanges()
+    }
+
+    /// Sends a verification email to the new address. The actual email change only happens
+    /// once the user clicks the link in that email. Throws `requiresRecentLogin` if the
+    /// session is too old — UI should prompt the user to sign out and back in.
+    func sendEmailChangeVerification(newEmail: String) async throws {
+        guard let user = Auth.auth().currentUser else { return }
+        try await user.sendEmailVerification(beforeUpdatingEmail: newEmail)
+    }
+
+    // MARK: - Image upload (Firebase Storage)
+
+    /// Uploads JPEG data to Firebase Storage at the given path and returns a public
+    /// download URL the client can save into Firestore (e.g. as photoURL / logoURL).
+    func uploadImage(_ data: Data, path: String) async throws -> String {
+        let ref = Storage.storage().reference().child(path)
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        _ = try await ref.putDataAsync(data, metadata: metadata)
+        let url = try await ref.downloadURL()
+        return url.absoluteString
     }
 
     /// Fetches a user document directly (used for looking up a defendant's email when sending challenges).

@@ -50,6 +50,9 @@ struct SuperAdminClubsTab: View {
     @State private var deletingClub: Club?
     @State private var showDeleteConfirm = false
     @State private var errorMsg:    String?
+    @State private var showResetConfirm = false
+    @State private var isResetting       = false
+    @State private var resetMessage:     String?
 
     private var filtered: [Club] {
         searchText.isEmpty ? clubs
@@ -61,6 +64,32 @@ struct SuperAdminClubsTab: View {
         ZStack {
             Theme.background.ignoresSafeArea()
             VStack(spacing: 0) {
+
+                // Reset trials — gold pill button, prominent
+                Button { showResetConfirm = true } label: {
+                    HStack(spacing: 8) {
+                        if isResetting {
+                            ProgressView().tint(.black)
+                        } else {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                            Text("Reset Trials for All Clubs (\(Config.clubTrialDurationDays) days)")
+                        }
+                    }
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.gold, in: RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(isResetting)
+                .padding(.horizontal).padding(.top, 8)
+
+                if let resetMessage {
+                    Text(resetMessage)
+                        .font(.caption.bold()).foregroundStyle(Theme.success)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.horizontal).padding(.top, 6)
+                }
 
                 // Search
                 HStack {
@@ -111,6 +140,18 @@ struct SuperAdminClubsTab: View {
             AdminDashboardView(club: club).environmentObject(auth)
         }
         .confirmationDialog(
+            "Reset trials for every club?",
+            isPresented: $showResetConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Reset All Trials", role: .destructive) {
+                Task { await resetTrials() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Every club gets a fresh \(Config.clubTrialDurationDays)-day free trial starting today. Active subscriptions will be reverted to trial — use this only at launch to grandfather existing clubs in.")
+        }
+        .confirmationDialog(
             "Permanently delete \(deletingClub?.name ?? "club")?",
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
@@ -140,6 +181,23 @@ struct SuperAdminClubsTab: View {
             await load()
         } catch { errorMsg = error.localizedDescription }
         deletingClub = nil
+    }
+
+    private func resetTrials() async {
+        isResetting = true; resetMessage = nil; errorMsg = nil
+        do {
+            let count = try await service.resetTrialsForAllClubs()
+            resetMessage = "Reset \(count) club\(count == 1 ? "" : "s") to a fresh \(Config.clubTrialDurationDays)-day trial."
+            await load()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
+        isResetting = false
+        // Auto-clear the success message after 4 seconds so it doesn't linger
+        Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            resetMessage = nil
+        }
     }
 }
 

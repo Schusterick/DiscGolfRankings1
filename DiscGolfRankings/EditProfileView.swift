@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 // MARK: - EditProfileView
 // Opened from Profile → "Edit Profile". Lets the user set a photo URL,
@@ -14,16 +15,23 @@ struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     private let service = FirebaseService.shared
 
+    @State private var firstName: String = ""
+    @State private var lastName:  String = ""
+    @State private var email:     String = ""
+    @State private var originalEmail: String = ""    // to detect change
     @State private var photoURL:  String = ""
     @State private var bio:       String = ""
     @State private var instagram: String = ""
     @State private var facebook:  String = ""
     @State private var twitter:   String = ""
     @State private var tiktok:    String = ""
+    @State private var favoriteCourse: String = ""
+    @State private var yearsPlayingStr: String = ""
 
     @State private var isSaving = false
     @State private var errorMsg: String?
     @State private var showSaved = false
+    @State private var showEmailNote = false        // shown after a successful email-change request
 
     var body: some View {
         NavigationStack {
@@ -31,21 +39,51 @@ struct EditProfileView: View {
                 Theme.background.ignoresSafeArea()
 
                 Form {
-                    // MARK: Photo preview
+                    // MARK: Photo upload
                     Section {
                         VStack(spacing: 12) {
-                            avatar
-                            TextField("Profile picture URL", text: $photoURL)
-                                .foregroundStyle(Theme.textPrimary)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.URL)
-                            Text("Paste a public image URL (Instagram photo, Gravatar, Imgur, etc.)")
-                                .font(.caption2)
-                                .foregroundStyle(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if let uid = auth.currentUser?.uid {
+                                PhotoUploadAvatar(
+                                    storagePath: "users/\(uid)/profile.jpg",
+                                    photoURL: $photoURL,
+                                    initials: initials,
+                                    diameter: 110
+                                )
+                            } else {
+                                avatar
+                            }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // MARK: Name
+                    Section("Your Name") {
+                        TextField("First name", text: $firstName)
+                            .foregroundStyle(Theme.textPrimary)
+                            .textContentType(.givenName)
+                            .autocorrectionDisabled()
+                        TextField("Last name", text: $lastName)
+                            .foregroundStyle(Theme.textPrimary)
+                            .textContentType(.familyName)
+                            .autocorrectionDisabled()
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // MARK: Email
+                    Section(header: Text("Email").foregroundStyle(Theme.textSecondary),
+                            footer: Text(email == originalEmail
+                                         ? "Used for sign-in. Won't be shown publicly to other players."
+                                         : "We'll send a verification link to the new address. Your email won't change until you click that link.")
+                                        .font(.caption2)
+                                        .foregroundStyle(Theme.textSecondary)) {
+                        TextField("you@example.com", text: $email)
+                            .foregroundStyle(Theme.textPrimary)
+                            .keyboardType(.emailAddress)
+                            .textContentType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
                     }
                     .listRowBackground(Theme.card)
 
@@ -55,6 +93,22 @@ struct EditProfileView: View {
                                   text: $bio, axis: .vertical)
                             .lineLimit(2...5)
                             .foregroundStyle(Theme.textPrimary)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // MARK: Disc-golf fun facts
+                    Section("Disc Golf") {
+                        HStack {
+                            Image(systemName: "flag.fill").foregroundStyle(Theme.gold).frame(width: 24)
+                            TextField("Favorite course", text: $favoriteCourse)
+                                .foregroundStyle(Theme.textPrimary)
+                        }
+                        HStack {
+                            Image(systemName: "calendar").foregroundStyle(Theme.gold).frame(width: 24)
+                            TextField("Years playing", text: $yearsPlayingStr)
+                                .foregroundStyle(Theme.textPrimary)
+                                .keyboardType(.numberPad)
+                        }
                     }
                     .listRowBackground(Theme.card)
 
@@ -105,6 +159,11 @@ struct EditProfileView: View {
             .onAppear { loadCurrent() }
             .alert("Saved!", isPresented: $showSaved) {
                 Button("OK") { dismiss() }
+            }
+            .alert("Check your inbox", isPresented: $showEmailNote) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("We sent a verification link to your new email. Your email won't change until you click that link.")
             }
         }
         .preferredColorScheme(.dark)
@@ -174,29 +233,72 @@ struct EditProfileView: View {
 
     private func loadCurrent() {
         let u = auth.appUser
-        photoURL  = u?.photoURL  ?? ""
-        bio       = u?.bio       ?? ""
-        instagram = u?.instagram ?? ""
-        facebook  = u?.facebook  ?? ""
-        twitter   = u?.twitter   ?? ""
-        tiktok    = u?.tiktok    ?? ""
+        photoURL        = u?.photoURL        ?? ""
+        bio             = u?.bio             ?? ""
+        instagram       = u?.instagram       ?? ""
+        facebook        = u?.facebook        ?? ""
+        twitter         = u?.twitter         ?? ""
+        tiktok          = u?.tiktok          ?? ""
+        favoriteCourse  = u?.favoriteCourse  ?? ""
+        yearsPlayingStr = u?.yearsPlaying.map { String($0) } ?? ""
+
+        // Split current displayName into first/last for editing
+        let full = (u?.displayName ?? auth.currentUser?.displayName ?? "")
+            .trimmingCharacters(in: .whitespaces)
+        let parts = full.split(separator: " ", maxSplits: 1)
+        firstName = parts.first.map(String.init) ?? ""
+        lastName  = parts.count > 1 ? String(parts.last!) : ""
+
+        email         = u?.email ?? auth.currentUser?.email ?? ""
+        originalEmail = email
+    }
+
+    private var combinedName: String {
+        let f = firstName.trimmingCharacters(in: .whitespaces)
+        let l = lastName.trimmingCharacters(in: .whitespaces)
+        return [f, l].filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     private func save() async {
         guard let uid = auth.currentUser?.uid else { return }
         isSaving = true; errorMsg = nil
+        let newName = combinedName
+        let newEmail = email.trimmingCharacters(in: .whitespaces)
+        let emailChanged = newEmail.lowercased() != originalEmail.lowercased() && !newEmail.isEmpty
+
         do {
+            // 1. Push display name + bio/photo/socials to Firestore
             try await service.updateUserProfile(
                 uid: uid,
-                photoURL:  photoURL.trimmingCharacters(in: .whitespaces),
-                bio:       bio.trimmingCharacters(in: .whitespaces),
-                instagram: instagram.trimmingCharacters(in: .whitespaces),
-                facebook:  facebook.trimmingCharacters(in: .whitespaces),
-                twitter:   twitter.trimmingCharacters(in: .whitespaces),
-                tiktok:    tiktok.trimmingCharacters(in: .whitespaces)
+                displayName:    newName.isEmpty ? nil : newName,
+                photoURL:       photoURL.trimmingCharacters(in: .whitespaces),
+                bio:            bio.trimmingCharacters(in: .whitespaces),
+                instagram:      instagram.trimmingCharacters(in: .whitespaces),
+                facebook:       facebook.trimmingCharacters(in: .whitespaces),
+                twitter:        twitter.trimmingCharacters(in: .whitespaces),
+                tiktok:         tiktok.trimmingCharacters(in: .whitespaces),
+                favoriteCourse: favoriteCourse.trimmingCharacters(in: .whitespaces),
+                yearsPlaying:   Int(yearsPlayingStr.trimmingCharacters(in: .whitespaces))
             )
+
+            // 2. Keep Firebase Auth in sync with the new display name
+            if !newName.isEmpty {
+                try? await service.updateAuthDisplayName(newName)
+            }
+
+            // 3. Email change — sends verification link to the new address
+            if emailChanged {
+                try await service.sendEmailChangeVerification(newEmail: newEmail)
+                await auth.reloadAppUser()
+                showEmailNote = true
+                isSaving = false
+                return
+            }
+
             await auth.reloadAppUser()
             showSaved = true
+        } catch let err as NSError where err.code == AuthErrorCode.requiresRecentLogin.rawValue {
+            errorMsg = "For security, please sign out and back in before changing your email."
         } catch {
             errorMsg = error.localizedDescription
         }

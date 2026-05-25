@@ -36,7 +36,7 @@ struct DiscGolfRankingsApp: App {
 
 struct MainTabView: View {
     @EnvironmentObject var auth: AuthService
-    @State private var selectedTab = 2
+    @State private var selectedTab = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -244,10 +244,19 @@ struct ProfileView: View {
             }
             .shadow(color: Theme.accent.opacity(0.5), radius: 12)
 
-            Text(displayName)
-                .font(.system(size: 26, weight: .black, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
+            Button { showEditProfile = true } label: {
+                HStack(spacing: 6) {
+                    Text(displayName)
+                        .font(.system(size: 26, weight: .black, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .buttonStyle(.plain)
 
+            // Your own email is shown to you only (private — never shown on PublicProfileView)
             Text(auth.currentUser?.email ?? "")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
@@ -266,6 +275,30 @@ struct ProfileView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 4)
             }
+
+            // Disc-golf fun facts
+            if let user = auth.appUser, hasAnyFunFact(user) {
+                HStack(spacing: 14) {
+                    if let course = user.favoriteCourse, !course.isEmpty {
+                        Label(course, systemImage: "flag.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(Theme.textPrimary)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Theme.gold.opacity(0.15), in: Capsule())
+                            .foregroundStyle(Theme.gold)
+                    }
+                    if let years = user.yearsPlaying {
+                        Label(years == 1 ? "1 yr playing" : "\(years) yrs playing",
+                              systemImage: "calendar")
+                            .font(.caption.bold())
+                            .foregroundStyle(Theme.textPrimary)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Theme.accent.opacity(0.15), in: Capsule())
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
+                .padding(.top, 6)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
@@ -274,6 +307,10 @@ struct ProfileView: View {
     private func hasAnySocial(_ u: AppUser) -> Bool {
         ![u.instagram, u.facebook, u.twitter, u.tiktok].compactMap { $0 }
             .filter { !$0.isEmpty }.isEmpty
+    }
+
+    private func hasAnyFunFact(_ u: AppUser) -> Bool {
+        !(u.favoriteCourse?.isEmpty ?? true) || u.yearsPlaying != nil
     }
 
     // MARK: Stats Row

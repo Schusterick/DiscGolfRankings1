@@ -9,36 +9,47 @@ struct AdminDashboardView: View {
     private let service = FirebaseService.shared
 
     @State private var selectedTab = 0
+    @State private var showSubscription = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.background.ignoresSafeArea()
-                TabView(selection: $selectedTab) {
-                    MembersTabView(club: club)
-                        .tabItem { Label("Members", systemImage: "person.3") }
-                        .tag(0)
-                    ClubSettingsTabView(club: club)
-                        .tabItem { Label("Settings", systemImage: "gear") }
-                        .tag(1)
-                    ApplicationsTabView(club: club)
-                        .tabItem { Label("Applications", systemImage: "tray.and.arrow.down") }
-                        .tag(2)
-                    PaymentsTabView(club: club)
-                        .tabItem { Label("Payments", systemImage: "creditcard.fill") }
-                        .tag(3)
-                    EventsTabView(club: club)
-                        .tabItem { Label("Events", systemImage: "calendar") }
-                        .tag(4)
+                VStack(spacing: 0) {
+                    // Subscription nudge banner (hidden when active + plenty of trial)
+                    SubscriptionStatusBanner(club: club,
+                                             onTap: { showSubscription = true })
+                        .padding(.horizontal).padding(.top, 8)
+
+                    TabView(selection: $selectedTab) {
+                        MembersTabView(club: club)
+                            .tabItem { Label("Members", systemImage: "person.3") }
+                            .tag(0)
+                        ClubSettingsTabView(club: club)
+                            .tabItem { Label("Settings", systemImage: "gear") }
+                            .tag(1)
+                        ApplicationsTabView(club: club)
+                            .tabItem { Label("Applications", systemImage: "tray.and.arrow.down") }
+                            .tag(2)
+                        PaymentsTabView(club: club)
+                            .tabItem { Label("Payments", systemImage: "creditcard.fill") }
+                            .tag(3)
+                        EventsTabView(club: club)
+                            .tabItem { Label("Events", systemImage: "calendar") }
+                            .tag(4)
+                    }
+                    .tint(Theme.accent)
                 }
-                .tint(Theme.accent)
+            }
+            .sheet(isPresented: $showSubscription) {
+                ClubSubscriptionView(club: club).environmentObject(auth)
             }
             .navigationTitle("Admin Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .darkNavBar()
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
                         .foregroundStyle(Theme.accent)
                 }
             }
@@ -216,6 +227,7 @@ struct MemberAdminRow: View {
 
 struct ClubSettingsTabView: View {
     let club: Club
+    @Environment(\.dismiss) private var dismiss
     private let service = FirebaseService.shared
 
     @State private var name             = ""
@@ -225,13 +237,17 @@ struct ClubSettingsTabView: View {
     @State private var website          = ""
     @State private var contactEmail     = ""
     @State private var contactPhone     = ""
+    @State private var logoURL          = ""
+    @State private var foundedYearStr   = ""
     @State private var isSaving         = false
     @State private var showSuccess      = false
     @State private var errorMsg: String?
+    @State private var showSubscription = false
 
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
+            VStack(spacing: 0) {
             Form {
                 Section("Club Identity") {
                     darkField("Club Name", text: $name)
@@ -240,6 +256,26 @@ struct ClubSettingsTabView: View {
                         .keyboardType(.URL)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                    darkField("Founded year (e.g. 2018)", text: $foundedYearStr)
+                        .keyboardType(.numberPad)
+                }
+                .listRowBackground(Theme.card)
+
+                Section(header: Text("Club Logo").foregroundStyle(Theme.textSecondary),
+                        footer: Text("Tap the circle to upload from your camera roll. Shown on the club profile and in share previews.")
+                                    .font(.caption2).foregroundStyle(Theme.textSecondary)) {
+                    if let clubId = club.id {
+                        VStack {
+                            PhotoUploadAvatar(
+                                storagePath: "clubs/\(clubId)/logo.jpg",
+                                photoURL: $logoURL,
+                                initials: String(name.prefix(2)).uppercased(),
+                                diameter: 96
+                            )
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                    }
                 }
                 .listRowBackground(Theme.card)
 
@@ -257,6 +293,24 @@ struct ClubSettingsTabView: View {
                         .textInputAutocapitalization(.never)
                     darkField("Contact phone", text: $contactPhone)
                         .keyboardType(.phonePad)
+                }
+                .listRowBackground(Theme.card)
+
+                Section("Subscription") {
+                    Button { showSubscription = true } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Manage Subscription")
+                                    .foregroundStyle(Theme.textPrimary)
+                                Text(club.subscriptionState.label)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
                 }
                 .listRowBackground(Theme.card)
 
@@ -278,24 +332,47 @@ struct ClubSettingsTabView: View {
                     Section { Text(errorMsg).foregroundStyle(.red).font(.caption) }
                         .listRowBackground(Theme.card)
                 }
-
-                Section {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        Group {
-                            if isSaving { ProgressView().tint(.white) }
-                            else { Text("Save Changes").fontWeight(.semibold) }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .foregroundStyle(.white)
-                    }
-                    .disabled(isSaving)
-                    .listRowBackground(Theme.accent.opacity(0.85))
-                }
             }
             .darkListStyle()
+
+            // Sticky bottom action bar — explicit Cancel + Save
+            HStack(spacing: 10) {
+                Button(role: .cancel) { dismiss() } label: {
+                    Text("Cancel")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.divider, lineWidth: 1))
+                }
+
+                Button { Task { await save() } } label: {
+                    Group {
+                        if isSaving {
+                            ProgressView().tint(.white)
+                        } else if showSuccess {
+                            Label("Saved!", systemImage: "checkmark.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                        } else {
+                            Text("Save")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(showSuccess ? Theme.success : Theme.accent,
+                                in: RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(isSaving)
+                .animation(.easeInOut(duration: 0.2), value: showSuccess)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            .background(Theme.background)
+            }
         }
         .onAppear {
             name             = club.name
@@ -305,9 +382,11 @@ struct ClubSettingsTabView: View {
             website          = club.website ?? ""
             contactEmail     = club.contactEmail ?? ""
             contactPhone     = club.contactPhone ?? ""
+            logoURL          = club.logoURL ?? ""
+            foundedYearStr   = club.foundedYear.map { String($0) } ?? ""
         }
-        .alert("Saved!", isPresented: $showSuccess) {
-            Button("OK") { }
+        .sheet(isPresented: $showSubscription) {
+            ClubSubscriptionView(club: club)
         }
     }
 
@@ -318,7 +397,10 @@ struct ClubSettingsTabView: View {
     }
 
     private func save() async {
-        guard let clubId = club.id else { return }
+        guard let clubId = club.id else {
+            errorMsg = "Cannot save — club ID is missing."
+            return
+        }
         isSaving = true
         errorMsg = nil
         let fee = Double(joinFeeStr) ?? 0
@@ -327,12 +409,18 @@ struct ClubSettingsTabView: View {
                                          joinFee: fee, missionStatement: missionStatement,
                                          website: website,
                                          contactEmail: contactEmail.trimmingCharacters(in: .whitespaces),
-                                         contactPhone: contactPhone.trimmingCharacters(in: .whitespaces))
-            showSuccess = true
+                                         contactPhone: contactPhone.trimmingCharacters(in: .whitespaces),
+                                         logoURL: logoURL.trimmingCharacters(in: .whitespaces),
+                                         foundedYear: Int(foundedYearStr.trimmingCharacters(in: .whitespaces)))
+            isSaving = false
+            // Flash the green "Saved!" button for 2 seconds, then revert.
+            withAnimation { showSuccess = true }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            withAnimation { showSuccess = false }
         } catch {
-            errorMsg = error.localizedDescription
+            errorMsg = "Save failed: \(error.localizedDescription)"
+            isSaving = false
         }
-        isSaving = false
     }
 }
 
@@ -541,25 +629,20 @@ struct PaymentsTabView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.divider, lineWidth: 1))
 
                     if let fee = Double(joinFeeStr), fee > 0 {
-                        let receives = fee * (1 - Config.stripePlatformFee)
-                        let platform = fee * Config.stripePlatformFee
-                        HStack {
-                            Label(String(format: "Club gets $%.2f", receives), systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(Theme.success)
-                            Spacer()
-                            Label(String(format: "Fee $%.2f", platform), systemImage: "info.circle")
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        .font(.caption)
+                        Label(String(format: "Club keeps 100%% — $%.2f per member", fee),
+                              systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(Theme.success)
                     }
                 }
 
-                // Info card
+                // Info card — flat-fee model, no per-transaction cut
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "info.circle.fill").foregroundStyle(Theme.accent).font(.headline)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("10% Platform Fee").font(.subheadline.bold()).foregroundStyle(Theme.textPrimary)
-                        Text("DiscGolfRankings keeps 10% of each membership payment. You receive the remaining 90% directly to your bank via Stripe Connect.")
+                        Text("Club Keeps 100%")
+                            .font(.subheadline.bold()).foregroundStyle(Theme.textPrimary)
+                        Text("DiscGolfRankings does NOT take a percentage of member payments. Your club receives every dollar members pay you. The platform is funded by a flat $\(Int(Config.clubSubscriptionAnnualFee))/year club subscription.")
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -618,7 +701,7 @@ struct PaymentsTabView: View {
 
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "info.circle.fill").foregroundStyle(Theme.accent)
-                    Text("You receive 90% of each payment. DiscGolfRankings retains \(Int(Config.stripePlatformFee * 100))% as a platform fee. Stripe handles payouts, fraud protection, and compliance.")
+                    Text("You receive 100% of every membership payment. Stripe handles payouts, fraud protection, and compliance. DiscGolfRankings is funded by a flat $\(Int(Config.clubSubscriptionAnnualFee))/year club subscription — no per-transaction cut.")
                         .font(.caption).foregroundStyle(Theme.textSecondary)
                 }
                 .padding(14)

@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 // MARK: - SignInView
 
@@ -82,6 +83,25 @@ struct SignInView: View {
                             .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
                         }
                         .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
+
+                        // — OR — divider
+                        HStack(spacing: 10) {
+                            Rectangle().fill(Theme.divider).frame(height: 1)
+                            Text("OR").font(.caption).foregroundStyle(Theme.textSecondary)
+                            Rectangle().fill(Theme.divider).frame(height: 1)
+                        }
+                        .padding(.vertical, 4)
+
+                        // Sign in with Apple
+                        SignInWithAppleButton(.signIn,
+                            onRequest: { auth.makeAppleSignInRequest($0) },
+                            onCompletion: { result in
+                                Task { await auth.handleAppleSignInResult(result) }
+                            }
+                        )
+                        .signInWithAppleButtonStyle(.white)   // matches the dark-on-light card look on top of our dark gradient
+                        .frame(height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .padding(.horizontal)
 
@@ -159,6 +179,24 @@ struct SignUpView: View {
                         SecureField("Confirm Password", text: $confirmPassword)
                             .foregroundStyle(Theme.textPrimary)
                             .textContentType(.newPassword)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // Heads-up notice before they finish signing up
+                    Section {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "bell.fill")
+                                .foregroundStyle(Theme.gold)
+                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Heads up")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Theme.textPrimary)
+                                Text("Once you join a club, the club admin may contact you about leagues, tournaments, and other events. Your email is only visible to club admins of clubs you join — never to other players.")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
                     }
                     .listRowBackground(Theme.card)
 

@@ -6,7 +6,13 @@ import SwiftUI
 // upcoming events.
 
 struct ClubPublicProfileView: View {
-    let club: Club
+    /// State-backed copy of the club so we can refresh from Firestore after
+    /// admin edits and pull-to-refresh. Initialized from the passed-in club.
+    @State private var club: Club
+
+    init(club: Club) {
+        _club = State(initialValue: club)
+    }
 
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) private var dismiss
@@ -15,10 +21,12 @@ struct ClubPublicProfileView: View {
     @State private var admin:           AppUser?
     @State private var events:          [Event] = []
     @State private var amMember:        Bool    = false
+    @State private var amAdmin:         Bool    = false
     @State private var pendingRequest:  JoinRequest?
     @State private var isLoading        = false
     @State private var isJoining        = false
     @State private var openEvent:       Event?
+    @State private var showAdmin        = false
     @State private var showPaymentView  = false
     @State private var joinErrorMsg:    String?
 
@@ -34,9 +42,7 @@ struct ClubPublicProfileView: View {
         return URL(string: "discgolfranks://club/\(id)")
     }
 
-    private var shareText: String {
-        "Check out \(club.name) on DiscGolfRankings — \(feeLabel)."
-    }
+    private var shareText: String { "Join this club!" }
 
     var body: some View {
         NavigationStack {
@@ -70,20 +76,39 @@ struct ClubPublicProfileView: View {
                     Button("Close") { dismiss() }.foregroundStyle(Theme.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    if let url = shareURL {
-                        ShareLink(item: url, message: Text(shareText)) {
-                            Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
+                    HStack(spacing: 14) {
+                        if amAdmin {
+                            Button { showAdmin = true } label: {
+                                Image(systemName: "gear").foregroundStyle(Theme.gold)
+                            }
+                        }
+                        if let url = shareURL {
+                            ShareLink(
+                                item:    url,
+                                subject: Text("Join \(club.name)!"),
+                                message: Text(shareText),
+                                preview: SharePreview(
+                                    "Join \(club.name)!",
+                                    image: Image(systemName: "figure.disc.sports")
+                                )
+                            ) {
+                                Image(systemName: "square.and.arrow.up").foregroundStyle(Theme.accent)
+                            }
                         }
                     }
                 }
             }
             .task { await load() }
+            .refreshable { await load() }
             .sheet(item: $openEvent) { event in
                 EventDetailView(event: event, club: club, isClubMember: amMember)
                     .environmentObject(auth)
             }
             .sheet(isPresented: $showPaymentView, onDismiss: { Task { await load() } }) {
                 PaymentPreviewView(club: club).environmentObject(auth)
+            }
+            .sheet(isPresented: $showAdmin, onDismiss: { Task { await load() } }) {
+                AdminDashboardView(club: club).environmentObject(auth)
             }
         }
         .preferredColorScheme(.dark)
@@ -191,9 +216,23 @@ struct ClubPublicProfileView: View {
                     .fill(LinearGradient(colors: [Theme.accent, Theme.gold],
                                          startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 96, height: 96)
-                Image(systemName: "figure.disc.sports")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.white)
+
+                if let urlStr = club.logoURL, !urlStr.isEmpty, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:    ProgressView().tint(.white)
+                        case .success(let img): img.resizable().scaledToFill()
+                        case .failure:  Image(systemName: "figure.disc.sports").font(.system(size: 40)).foregroundStyle(.white)
+                        @unknown default: EmptyView()
+                        }
+                    }
+                    .frame(width: 92, height: 92)
+                    .clipShape(Circle())
+                } else {
+                    Image(systemName: "figure.disc.sports")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.white)
+                }
             }
             .shadow(color: Theme.accent.opacity(0.4), radius: 14)
 
@@ -207,6 +246,11 @@ struct ClubPublicProfileView: View {
                     .font(.caption).foregroundStyle(Theme.textSecondary)
                 Text(club.location)
                     .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                if let year = club.foundedYear {
+                    Text("•").foregroundStyle(Theme.textSecondary)
+                    Text("Est. \(String(year))")
+                        .font(.subheadline).foregroundStyle(Theme.gold)
+                }
             }
         }
     }
@@ -372,6 +416,12 @@ struct ClubPublicProfileView: View {
         isLoading = true
         defer { isLoading = false }
 
+        // Re-fetch the club so edits made via the admin dashboard show up
+        // immediately when the user returns to this view.
+        if let clubId = club.id, let fresh = try? await service.fetchClub(id: clubId) {
+            club = fresh
+        }
+
         if let clubId = club.id {
             async let evtFetch = service.fetchEvents(clubId: clubId)
             events = (try? await evtFetch) ?? []
@@ -382,13 +432,20 @@ struct ClubPublicProfileView: View {
             admin = try? await service.fetchUser(uid: club.adminUID)
         }
 
-        // Is the current viewer a member / has a pending request?
+        // Is the current viewer a member / has a pending request / is an admin?
         if let me = auth.currentUser?.uid, let clubId = club.id {
             async let mFetch = service.fetchMembership(userId: me, clubId: clubId)
             async let rFetch = service.checkJoinRequest(userId: me, clubId: clubId)
             let m = try? await mFetch
             amMember = m != nil
             pendingRequest = try? await rFetch
+
+            // Admin check: membership.isAdmin == true, OR club's adminUID matches,
+            // OR club.adminUserIds contains me, OR I'm super admin.
+            amAdmin = (m?.isAdmin == true)
+                  || (club.adminUID == me)
+                  || (club.adminUserIds?.contains(me) == true)
+                  || auth.isSuperAdmin
         }
     }
 }

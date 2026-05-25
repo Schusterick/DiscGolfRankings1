@@ -54,6 +54,11 @@ struct PublicProfileView: View {
 
                         if let s = stats { statsRow(s) }
 
+                        // Disc-golf fun facts (only if filled in)
+                        if let user, hasAnyFunFact(user) {
+                            funFactsRow(user: user)
+                        }
+
                         if canChallenge, let target = theirMembership {
                             Button { challengeTarget = target } label: {
                                 Label("Challenge in \(clubContext?.name ?? "Club")",
@@ -133,11 +138,8 @@ struct PublicProfileView: View {
             Text(displayName)
                 .font(.system(size: 26, weight: .black, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
-            if let email = user?.email {
-                Text(email)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-            }
+            // Email is intentionally hidden — players should reach each other
+            // through the in-app Challenge flow, not via raw email addresses.
         }
     }
 
@@ -169,6 +171,39 @@ struct PublicProfileView: View {
     private func hasAnySocial(_ u: AppUser) -> Bool {
         ![u.instagram, u.facebook, u.twitter, u.tiktok].compactMap { $0 }
             .filter { !$0.isEmpty }.isEmpty
+    }
+
+    private func hasAnyFunFact(_ u: AppUser) -> Bool {
+        !(u.favoriteCourse?.isEmpty ?? true) || u.yearsPlaying != nil
+    }
+
+    @ViewBuilder
+    private func funFactsRow(user: AppUser) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let course = user.favoriteCourse, !course.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "flag.fill").foregroundStyle(Theme.gold).frame(width: 22)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Favorite course").font(.caption2).foregroundStyle(Theme.textSecondary)
+                        Text(course).font(.subheadline).foregroundStyle(Theme.textPrimary)
+                    }
+                }
+            }
+            if let years = user.yearsPlaying {
+                HStack(spacing: 10) {
+                    Image(systemName: "calendar").foregroundStyle(Theme.gold).frame(width: 22)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Years playing").font(.caption2).foregroundStyle(Theme.textSecondary)
+                        Text(years == 1 ? "1 year" : "\(years) years")
+                            .font(.subheadline).foregroundStyle(Theme.textPrimary)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 24)
     }
 
     // MARK: Loading

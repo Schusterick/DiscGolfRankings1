@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA2803592FC49389003087EE /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = AA2803582FC49389003087EE /* FirebaseStorage */; };
 		AA6832392FB3BAFC0095B25F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B0010060 /* FirebaseAuth */; };
 		AA68323A2FB3BAFC0095B25F /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B0010061 /* FirebaseFirestore */; };
 		B001000A /* AppEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001000B /* AppEntry.swift */; };
@@ -16,24 +17,27 @@
 		B0010012 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010013 /* AuthViews.swift */; };
 		B0010014 /* ClubViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010015 /* ClubViews.swift */; };
 		B0010016 /* ChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010017 /* ChallengeViews.swift */; };
+		B0010018 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B0010019 /* GoogleService-Info.plist */; };
+		B001001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B001001B /* Assets.xcassets */; };
 		B0010090 /* GroupRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010091 /* GroupRoundViews.swift */; };
 		B0010092 /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010093 /* AdminViews.swift */; };
 		B0010094 /* PendingRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010095 /* PendingRoundViews.swift */; };
 		B0010096 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010097 /* Theme.swift */; };
 		B0010098 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010099 /* OnboardingView.swift */; };
 		B001009A /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001009B /* AdminDashboardView.swift */; };
-		B001009C /* Config.swift in Sources */           = {isa = PBXBuildFile; fileRef = B001009D /* Config.swift */; };
-		B001009E /* CloudFunctions.swift in Sources */   = {isa = PBXBuildFile; fileRef = B001009F /* CloudFunctions.swift */; };
-		B00100A0 /* StripeService.swift in Sources */    = {isa = PBXBuildFile; fileRef = B00100A1 /* StripeService.swift */; };
-		B00100A2 /* PaymentViews.swift in Sources */     = {isa = PBXBuildFile; fileRef = B00100A3 /* PaymentViews.swift */; };
-		B00100A4 /* SuperAdminView.swift in Sources */   = {isa = PBXBuildFile; fileRef = B00100A5 /* SuperAdminView.swift */; };
-		B00100A6 /* EditProfileView.swift in Sources */  = {isa = PBXBuildFile; fileRef = B00100A7 /* EditProfileView.swift */; };
+		B001009C /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001009D /* Config.swift */; };
+		B001009E /* CloudFunctions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001009F /* CloudFunctions.swift */; };
+		B00100A0 /* StripeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A1 /* StripeService.swift */; };
+		B00100A2 /* PaymentViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A3 /* PaymentViews.swift */; };
+		B00100A4 /* SuperAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A5 /* SuperAdminView.swift */; };
+		B00100A6 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A7 /* EditProfileView.swift */; };
 		B00100A8 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100A9 /* PublicProfileView.swift */; };
-		B00100AA /* RankingEngine.swift in Sources */    = {isa = PBXBuildFile; fileRef = B00100AB /* RankingEngine.swift */; };
-		B00100AC /* EventViews.swift in Sources */       = {isa = PBXBuildFile; fileRef = B00100AD /* EventViews.swift */; };
+		B00100AA /* RankingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100AB /* RankingEngine.swift */; };
+		B00100AC /* EventViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100AD /* EventViews.swift */; };
 		B00100AE /* ClubPublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100AF /* ClubPublicProfileView.swift */; };
-		B0010018 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B0010019 /* GoogleService-Info.plist */; };
-		B001001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B001001B /* Assets.xcassets */; };
+		B00100B0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B00100B1 /* PrivacyInfo.xcprivacy */; };
+		B00100B2 /* ClubSubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100B3 /* ClubSubscriptionView.swift */; };
+		B00100B4 /* PhotoUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100B5 /* PhotoUploadView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,25 +49,28 @@
 		B0010013 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
 		B0010015 /* ClubViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubViews.swift; sourceTree = "<group>"; };
 		B0010017 /* ChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeViews.swift; sourceTree = "<group>"; };
+		B0010019 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		B001001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B0010020 /* DiscGolfRankings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiscGolfRankings.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B0010091 /* GroupRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRoundViews.swift; sourceTree = "<group>"; };
 		B0010093 /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
 		B0010095 /* PendingRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingRoundViews.swift; sourceTree = "<group>"; };
 		B0010097 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		B0010099 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		B001009B /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
-		B001009D /* Config.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		B001009F /* CloudFunctions.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudFunctions.swift; sourceTree = "<group>"; };
-		B00100A1 /* StripeService.swift */    = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeService.swift; sourceTree = "<group>"; };
-		B00100A3 /* PaymentViews.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentViews.swift; sourceTree = "<group>"; };
-		B00100A5 /* SuperAdminView.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperAdminView.swift; sourceTree = "<group>"; };
-		B00100A7 /* EditProfileView.swift */  = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		B001009D /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		B001009F /* CloudFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudFunctions.swift; sourceTree = "<group>"; };
+		B00100A1 /* StripeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeService.swift; sourceTree = "<group>"; };
+		B00100A3 /* PaymentViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentViews.swift; sourceTree = "<group>"; };
+		B00100A5 /* SuperAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperAdminView.swift; sourceTree = "<group>"; };
+		B00100A7 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
 		B00100A9 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
-		B00100AB /* RankingEngine.swift */    = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingEngine.swift; sourceTree = "<group>"; };
-		B00100AD /* EventViews.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventViews.swift; sourceTree = "<group>"; };
+		B00100AB /* RankingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingEngine.swift; sourceTree = "<group>"; };
+		B00100AD /* EventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventViews.swift; sourceTree = "<group>"; };
 		B00100AF /* ClubPublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubPublicProfileView.swift; sourceTree = "<group>"; };
-		B0010019 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		B001001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		B0010020 /* DiscGolfRankings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiscGolfRankings.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00100B1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B00100B3 /* ClubSubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubSubscriptionView.swift; sourceTree = "<group>"; };
+		B00100B5 /* PhotoUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoUploadView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,16 +80,25 @@
 			files = (
 				AA68323A2FB3BAFC0095B25F /* FirebaseFirestore in Frameworks */,
 				AA6832392FB3BAFC0095B25F /* FirebaseAuth in Frameworks */,
+				AA2803592FC49389003087EE /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AA2803572FC49389003087EE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B0010030 = {
 			isa = PBXGroup;
 			children = (
 				B0010031 /* DiscGolfRankings */,
+				AA2803572FC49389003087EE /* Frameworks */,
 				B0010032 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -114,7 +130,10 @@
 				B00100AB /* RankingEngine.swift */,
 				B00100AD /* EventViews.swift */,
 				B00100AF /* ClubPublicProfileView.swift */,
+				B00100B3 /* ClubSubscriptionView.swift */,
+				B00100B5 /* PhotoUploadView.swift */,
 				B0010019 /* GoogleService-Info.plist */,
+				B00100B1 /* PrivacyInfo.xcprivacy */,
 				B001001B /* Assets.xcassets */,
 			);
 			path = DiscGolfRankings;
@@ -147,6 +166,7 @@
 			packageProductDependencies = (
 				B0010060 /* FirebaseAuth */,
 				B0010061 /* FirebaseFirestore */,
+				AA2803582FC49389003087EE /* FirebaseStorage */,
 			);
 			productName = DiscGolfRankings;
 			productReference = B0010020 /* DiscGolfRankings.app */;
@@ -194,6 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0010018 /* GoogleService-Info.plist in Resources */,
+				B00100B0 /* PrivacyInfo.xcprivacy in Resources */,
 				B001001A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -228,6 +249,8 @@
 				B00100AA /* RankingEngine.swift in Sources */,
 				B00100AC /* EventViews.swift in Sources */,
 				B00100AE /* ClubPublicProfileView.swift in Sources */,
+				B00100B2 /* ClubSubscriptionView.swift in Sources */,
+				B00100B4 /* PhotoUploadView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,6 +266,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FLAF542U5N;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -266,6 +290,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FLAF542U5N;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -433,6 +458,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AA2803582FC49389003087EE /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		B0010060 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

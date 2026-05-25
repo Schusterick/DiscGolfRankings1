@@ -18,7 +18,8 @@ struct PaymentPreviewView: View {
     enum Step { case preview, cardEntry, success }
 
     private var joinFee:      Double { club.joinFee ?? 0 }
-    private var platformFee:  Double { joinFee * Config.stripePlatformFee }
+    private var feeRate:      Double { club.effectivePlatformFeeRate }   // 0% during trial
+    private var platformFee:  Double { joinFee * feeRate }
     private var clubReceives: Double { joinFee - platformFee }
 
     var body: some View {
@@ -84,17 +85,12 @@ struct PaymentPreviewView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // Fee breakdown card
+                // Fee breakdown — clubs always keep 100% under the flat-fee model
                 VStack(spacing: 0) {
                     feeRow(icon: "building.2.fill",
                            label: "Club receives",
                            value: String(format: "$%.2f", clubReceives),
                            color: Theme.success)
-                    Divider().background(Theme.divider)
-                    feeRow(icon: "percent",
-                           label: "Platform fee (10%)",
-                           value: String(format: "$%.2f", platformFee),
-                           color: Theme.textSecondary)
                 }
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.divider, lineWidth: 1))
@@ -361,12 +357,12 @@ struct MockCardPaymentView: View {
             try await service.joinClub(userId: uid, userFullName: name,
                                        clubId: clubId, userEmail: email)
 
-            // Step 3 — Log payment record
+            // Step 3 — Log payment record (0% platform fee while club is in free trial)
             try? await service.recordPayment(
                 userId: uid,
                 clubId: clubId,
                 amount: amount,
-                platformFee: amount * Config.stripePlatformFee,
+                platformFee: amount * club.effectivePlatformFeeRate,
                 stripePaymentIntentId: "pi_mock_\(UUID().uuidString.prefix(16))"
             )
 
