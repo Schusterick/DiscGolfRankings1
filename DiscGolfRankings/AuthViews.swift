@@ -7,6 +7,7 @@ struct SignInView: View {
     @EnvironmentObject var auth: AuthService
     @State private var email = ""
     @State private var password = ""
+    @State private var showPassword = false
     @State private var showSignUp = false
     @State private var showForgotPassword = false
 
@@ -48,12 +49,27 @@ struct SignInView: View {
                         .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.divider, lineWidth: 1))
 
-                        // Password field
+                        // Password field — with show/hide toggle
                         HStack(spacing: 10) {
                             Image(systemName: "lock").foregroundStyle(Theme.textSecondary)
-                            SecureField("Password", text: $password)
-                                .foregroundStyle(Theme.textPrimary)
-                                .textContentType(.password)
+                            Group {
+                                if showPassword {
+                                    TextField("Password", text: $password)
+                                        .textContentType(.password)
+                                } else {
+                                    SecureField("Password", text: $password)
+                                        .textContentType(.password)
+                                }
+                            }
+                            .foregroundStyle(Theme.textPrimary)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+
+                            Button { showPassword.toggle() } label: {
+                                Image(systemName: showPassword ? "eye.slash" : "eye")
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            .accessibilityLabel(showPassword ? "Hide password" : "Show password")
                         }
                         .padding(14)
                         .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
@@ -142,6 +158,8 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var showPassword = false
+    @State private var showConfirmPassword = false
 
     private var passwordsMatch: Bool { password == confirmPassword }
     private var canSubmit: Bool {
@@ -173,12 +191,42 @@ struct SignUpView: View {
                             .textContentType(.emailAddress)
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
-                        SecureField("Password (6+ characters)", text: $password)
+                        HStack {
+                            Group {
+                                if showPassword {
+                                    TextField("Password (6+ characters)", text: $password)
+                                } else {
+                                    SecureField("Password (6+ characters)", text: $password)
+                                }
+                            }
                             .foregroundStyle(Theme.textPrimary)
                             .textContentType(.newPassword)
-                        SecureField("Confirm Password", text: $confirmPassword)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            Button { showPassword.toggle() } label: {
+                                Image(systemName: showPassword ? "eye.slash" : "eye")
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            .accessibilityLabel(showPassword ? "Hide password" : "Show password")
+                        }
+                        HStack {
+                            Group {
+                                if showConfirmPassword {
+                                    TextField("Confirm Password", text: $confirmPassword)
+                                } else {
+                                    SecureField("Confirm Password", text: $confirmPassword)
+                                }
+                            }
                             .foregroundStyle(Theme.textPrimary)
                             .textContentType(.newPassword)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            Button { showConfirmPassword.toggle() } label: {
+                                Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            .accessibilityLabel(showConfirmPassword ? "Hide password" : "Show password")
+                        }
                     }
                     .listRowBackground(Theme.card)
 
