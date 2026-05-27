@@ -369,27 +369,107 @@ struct ClubPublicProfileView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: Events
+    // MARK: Events / Schedule
 
     @ViewBuilder
     private var eventsBlock: some View {
-        section("Upcoming Events") {
-            let upcoming = events.filter { $0.isUpcoming }
+        let upcoming = events.filter { $0.isUpcoming }
+        VStack(alignment: .leading, spacing: 12) {
+            // Prominent "Schedule" header — replaces the small all-caps section title
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(.title3)
+                    .foregroundStyle(Theme.gold)
+                Text("Schedule")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                if !upcoming.isEmpty {
+                    Text("\(upcoming.count) upcoming")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Theme.gold.opacity(0.18), in: Capsule())
+                        .foregroundStyle(Theme.gold)
+                }
+            }
+
             if upcoming.isEmpty {
-                Text("No upcoming events.").font(.caption).foregroundStyle(Theme.textSecondary)
+                Text("No upcoming events scheduled.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
             } else {
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     ForEach(upcoming) { e in
                         Button { openEvent = e } label: {
-                            EventListRow(event: e, showStatus: false)
-                                .padding(.horizontal, 12).padding(.vertical, 10)
-                                .background(Theme.cardAlt, in: RoundedRectangle(cornerRadius: 10))
+                            scheduleRow(for: e)
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
         }
+    }
+
+    /// Single-event "date strip" row — big month/day on the left, details on the right.
+    @ViewBuilder
+    private func scheduleRow(for event: Event) -> some View {
+        HStack(spacing: 14) {
+            // Date strip — calendar-style block
+            VStack(spacing: 0) {
+                Text(event.startDate.formatted(.dateTime.month(.abbreviated)).uppercased())
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 3)
+                    .background(Theme.accent)
+                Text(event.startDate.formatted(.dateTime.day()))
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Theme.background)
+            }
+            .frame(width: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.divider, lineWidth: 1))
+
+            // Title + location + time
+            VStack(alignment: .leading, spacing: 3) {
+                Text(event.title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                if let loc = event.location, !loc.isEmpty {
+                    Label(loc, systemImage: "mappin.and.ellipse")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                Text(event.startDate.formatted(date: .omitted, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            // RSVP indicator
+            if let r = event.rsvps, !r.isEmpty {
+                VStack(spacing: 2) {
+                    Image(systemName: "person.fill.checkmark")
+                        .foregroundStyle(Theme.success)
+                    Text("\(r.count)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(Theme.success)
+                }
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .padding(12)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.gold.opacity(0.15), lineWidth: 1))
     }
 
     // MARK: Generic section wrapper
