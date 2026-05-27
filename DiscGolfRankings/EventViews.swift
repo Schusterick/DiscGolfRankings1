@@ -399,6 +399,7 @@ struct SubmitEventScoresView: View {
                         .font(.caption).foregroundStyle(Theme.textSecondary)
                     Spacer()
                     Picker("", selection: $demotion) {
+                        Text("None (0)").tag(0)
                         Text("Gentle (1)").tag(1)
                         Text("Standard (2)").tag(2)
                         Text("Harsh (3)").tag(3)
