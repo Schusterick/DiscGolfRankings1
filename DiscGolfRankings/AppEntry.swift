@@ -164,7 +164,7 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .darkNavBar()
             .task { await loadData() }
             .refreshable { await loadData() }

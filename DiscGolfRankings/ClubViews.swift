@@ -46,7 +46,7 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("DiscGolfRankings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .darkNavBar()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -711,6 +711,7 @@ struct LeaderboardView: View {
                 }
             }
             .navigationTitle("Leaderboard")
+            .navigationBarTitleDisplayMode(.inline)
             .darkNavBar()
             .task { await loadClubs() }
             .refreshable { await loadClubs() }

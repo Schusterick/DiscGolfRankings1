@@ -58,3 +58,7 @@ fastlane/test_output
 *.swo
 .idea/
 .vscode/
+
+# ─── Stray spreadsheets / unrelated docs ──────────────────────────────────
+Cost_per_Disc_organized.xlsx
+*.xlsx
