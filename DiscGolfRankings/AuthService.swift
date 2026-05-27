@@ -1,9 +1,16 @@
 import Foundation
 import UIKit
 import FirebaseAuth
+import FirebaseCore
 import FirebaseFirestore
 import AuthenticationServices
 import CryptoKit
+#if canImport(GoogleSignIn)
+import GoogleSignIn       // SPM: https://github.com/google/GoogleSignIn-iOS
+#endif
+#if canImport(FBSDKLoginKit)
+import FBSDKLoginKit      // SPM: https://github.com/facebook/facebook-ios-sdk
+#endif
 
 @MainActor
 class AuthService: ObservableObject {
@@ -222,5 +229,123 @@ class AuthService: ObservableObject {
         let req = user.createProfileChangeRequest()
         req.displayName = name
         try await req.commitChanges()
+    }
+
+    // MARK: - Sign in with Google
+    #if canImport(GoogleSignIn)
+
+    /// Presents Google's OAuth flow, exchanges the resulting ID token for a Firebase
+    /// credential, and signs in. Creates the matching users/{uid} doc on first sign-in.
+    func signInWithGoogle() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            errorMessage = "Google sign-in is not configured."
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            return
+        }
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+
+        guard let rootVC = Self.rootViewController() else {
+            errorMessage = "Couldn't find a view to present from."
+            return
+        }
+
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootVC)
+            guard let idToken = result.user.idToken?.tokenString else {
+                errorMessage = "Google sign-in failed (no ID token)."
+                return
+            }
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
+            let authResult = try await Auth.auth().signIn(with: credential)
+            await createUserDocIfNeeded(authResult.user,
+                                        displayName: result.user.profile?.name)
+        } catch {
+            // GoogleSignIn returns a cancellation error if the user dismissed the sheet
+            let ns = error as NSError
+            if ns.code == GIDSignInError.canceled.rawValue { return }
+            errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+    }
+    #endif
+
+    // MARK: - Sign in with Facebook
+    #if canImport(FBSDKLoginKit)
+
+    /// Presents Facebook Login, exchanges the resulting access token for a Firebase
+    /// credential, and signs in. Creates the matching users/{uid} doc on first sign-in.
+    func signInWithFacebook() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        guard let rootVC = Self.rootViewController() else {
+            errorMessage = "Couldn't find a view to present from."
+            return
+        }
+
+        let manager = LoginManager()
+        do {
+            let fbResult: LoginManagerLoginResult = try await withCheckedThrowingContinuation { cont in
+                manager.logIn(permissions: ["public_profile", "email"], from: rootVC) { result, err in
+                    if let err {
+                        cont.resume(throwing: err)
+                    } else if let result {
+                        cont.resume(returning: result)
+                    } else {
+                        cont.resume(throwing: NSError(domain: "Facebook", code: 0,
+                                                      userInfo: [NSLocalizedDescriptionKey: "No result"]))
+                    }
+                }
+            }
+            if fbResult.isCancelled { return }
+            guard let token = AccessToken.current?.tokenString else {
+                errorMessage = "Facebook sign-in failed (no access token)."
+                return
+            }
+            let credential = FacebookAuthProvider.credential(withAccessToken: token)
+            let authResult = try await Auth.auth().signIn(with: credential)
+            await createUserDocIfNeeded(authResult.user, displayName: nil)
+        } catch {
+            errorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+    }
+    #endif
+
+    // MARK: - Helpers shared by all OAuth flows
+
+    /// Creates the Firestore users/{uid} doc on first sign-in. No-op for returning users.
+    private func createUserDocIfNeeded(_ user: User, displayName: String?) async {
+        let ref = db.collection("users").document(user.uid)
+        let existing = try? await ref.getDocument()
+        guard existing?.exists != true else { return }
+        let name = displayName ?? user.displayName ?? "Player"
+        let appUser = AppUser(
+            id:          user.uid,
+            email:       user.email ?? "",
+            displayName: name,
+            createdAt:   Date()
+        )
+        try? ref.setData(from: appUser)
+    }
+
+    /// Returns the top-most UIViewController for presenting OAuth flows.
+    /// Works for SwiftUI apps where there's no explicit UIWindow root.
+    private static func rootViewController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }),
+              var top = window.rootViewController
+        else { return nil }
+        while let presented = top.presentedViewController { top = presented }
+        return top
     }
 }

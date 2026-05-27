@@ -1,5 +1,11 @@
 import SwiftUI
 import FirebaseCore
+#if canImport(GoogleSignIn)
+import GoogleSignIn
+#endif
+#if canImport(FBSDKCoreKit)
+import FBSDKCoreKit
+#endif
 
 @main
 struct DiscGolfRankingsApp: App {
@@ -12,22 +18,47 @@ struct DiscGolfRankingsApp: App {
         // TODO: After adding Stripe SDK via SPM, uncomment the import in StripeService.swift
         //       and the STPAPIClient line inside StripeService.configure()
         StripeService.shared.configure()
+        #if canImport(FBSDKCoreKit)
+        // Facebook SDK initializes itself from the AppDelegate-style call below — we
+        // pass a minimal launchOptions dict because we don't have a real UIApplicationDelegate
+        // in this SwiftUI app.
+        ApplicationDelegate.shared.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+        #endif
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if !hasSeenOnboarding {
+                // Routing order: sign-in always comes first.
+                //  - Not signed in → SignInView (immediate account prompt)
+                //  - Signed in + onboarding not yet seen → OnboardingView (post-signup tour)
+                //  - Signed in + onboarding done → MainTabView
+                if !auth.isSignedIn {
+                    SignInView()
+                        .environmentObject(auth)
+                } else if !hasSeenOnboarding {
                     OnboardingView()
-                } else if auth.isSignedIn {
-                    MainTabView()
                         .environmentObject(auth)
                 } else {
-                    SignInView()
+                    MainTabView()
                         .environmentObject(auth)
                 }
             }
             .preferredColorScheme(.dark)
+            // Route OAuth callbacks from Google and Facebook back into their SDKs
+            .onOpenURL { url in
+                #if canImport(GoogleSignIn)
+                if GIDSignIn.sharedInstance.handle(url) { return }
+                #endif
+                #if canImport(FBSDKCoreKit)
+                _ = ApplicationDelegate.shared.application(
+                    UIApplication.shared,
+                    open: url,
+                    sourceApplication: nil,
+                    annotation: [UIApplication.OpenURLOptionsKey.annotation]
+                )
+                #endif
+            }
         }
     }
 }

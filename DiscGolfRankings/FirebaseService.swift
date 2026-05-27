@@ -893,7 +893,7 @@ class FirebaseService: ObservableObject {
             adminUIDs.remove(userId)
             let clubName = club.name
             for aid in adminUIDs {
-                try? await db.collection("notifications").addDocument(data: [
+                _ = try? await db.collection("notifications").addDocument(data: [
                     "userId":    aid,
                     "message":   "👤 \(userFullName) just joined \(clubName)!",
                     "isRead":    false,

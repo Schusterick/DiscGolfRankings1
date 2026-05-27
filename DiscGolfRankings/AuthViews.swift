@@ -115,9 +115,51 @@ struct SignInView: View {
                                 Task { await auth.handleAppleSignInResult(result) }
                             }
                         )
-                        .signInWithAppleButtonStyle(.white)   // matches the dark-on-light card look on top of our dark gradient
+                        .signInWithAppleButtonStyle(.white)
                         .frame(height: 50)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                        // Sign in with Google
+                        #if canImport(GoogleSignIn)
+                        Button { Task { await auth.signInWithGoogle() } } label: {
+                            HStack(spacing: 10) {
+                                // Use the multi-color "G" via SF Symbol fallback — when GoogleSignIn
+                                // ships its own asset we can swap it. SF doesn't have a colored G,
+                                // so we use a labeled circle that reads as Google.
+                                Text("G")
+                                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.blue)
+                                    .frame(width: 22, height: 22)
+                                    .background(.white, in: Circle())
+                                Text("Sign in with Google")
+                                    .font(.headline)
+                            }
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .disabled(auth.isLoading)
+                        .accessibilityLabel("Sign in with Google")
+                        #endif
+
+                        // Sign in with Facebook
+                        #if canImport(FBSDKLoginKit)
+                        Button { Task { await auth.signInWithFacebook() } } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "f.circle.fill")
+                                    .font(.headline)
+                                Text("Sign in with Facebook")
+                                    .font(.headline)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color(hex: "1877F2"), in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .disabled(auth.isLoading)
+                        .accessibilityLabel("Sign in with Facebook")
+                        #endif
                     }
                     .padding(.horizontal)
 
