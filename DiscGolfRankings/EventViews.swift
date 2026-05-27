@@ -65,6 +65,7 @@ struct CreateEventView: View {
     @State private var title          = ""
     @State private var description    = ""
     @State private var location       = ""
+    @State private var signupURL      = ""
     @State private var startDate      = Date().addingTimeInterval(60 * 60 * 24 * 7)  // +1 week
     @State private var numberOfRounds = 1
     @State private var isSaving       = false
@@ -93,6 +94,17 @@ struct CreateEventView: View {
                             .foregroundStyle(Theme.textPrimary)
                         DatePicker("Start", selection: $startDate, in: Date()...)
                             .foregroundStyle(Theme.textPrimary)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    Section(header: Text("Signup Link").foregroundStyle(Theme.textSecondary),
+                            footer: Text("Optional — paste a PDGA, Disc Golf Scene, or Eventbrite URL where players can register. We'll show a 'Sign Up' button on the event page.")
+                                        .font(.caption2).foregroundStyle(Theme.textSecondary)) {
+                        TextField("https://...", text: $signupURL)
+                            .foregroundStyle(Theme.textPrimary)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
                     }
                     .listRowBackground(Theme.card)
 
@@ -138,11 +150,20 @@ struct CreateEventView: View {
     private func save() async {
         guard let clubId = club.id, let uid = auth.currentUser?.uid else { return }
         isSaving = true; errorMsg = nil
+        // Normalize signupURL: add https:// if user typed a bare domain
+        let trimmedURL = signupURL.trimmingCharacters(in: .whitespaces)
+        let normalizedURL: String? = {
+            guard !trimmedURL.isEmpty else { return nil }
+            if trimmedURL.lowercased().hasPrefix("http") { return trimmedURL }
+            return "https://\(trimmedURL)"
+        }()
+
         let event = Event(
             clubId:         clubId,
             title:          title.trimmingCharacters(in: .whitespaces),
             description:    description.trimmingCharacters(in: .whitespaces),
             location:       location.trimmingCharacters(in: .whitespaces),
+            signupURL:      normalizedURL,
             startDate:      startDate,
             numberOfRounds: numberOfRounds,
             status:         .upcoming,
@@ -227,6 +248,20 @@ struct EventDetailView: View {
                                 .padding(14)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        // External signup link (PDGA / Disc Golf Scene / Eventbrite / etc.)
+                        if let urlStr = current.signupURL, !urlStr.isEmpty,
+                           let url = URL(string: urlStr) {
+                            Link(destination: url) {
+                                Label("Sign Up for This Event", systemImage: "arrow.up.right.square")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            .accessibilityLabel("Open external signup page for \(current.title)")
                         }
 
                         // RSVP block

@@ -458,6 +458,7 @@ struct Event: Identifiable, Codable {
     var title:          String
     var description:    String?
     var location:       String?     // course / venue
+    var signupURL:      String?     // optional external signup link (e.g. PDGA, Disc Golf Scene, Eventbrite)
     var startDate:      Date
     var numberOfRounds: Int         // 1..5
     var status:         EventStatus
