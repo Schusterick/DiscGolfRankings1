@@ -465,6 +465,9 @@ struct SuperAdminUsersTab: View {
     @State private var isLoading   = false
     @State private var searchText  = ""
     @State private var errorMsg:    String?
+    @State private var isBackfilling      = false
+    @State private var backfillMessage:   String?
+    @State private var showBackfillConfirm = false
 
     private var filtered: [AppUser] {
         searchText.isEmpty ? users
@@ -476,6 +479,33 @@ struct SuperAdminUsersTab: View {
         ZStack {
             Theme.background.ignoresSafeArea()
             VStack(spacing: 0) {
+
+                // Backfill World Rankings — only useful for first-time setup
+                Button { showBackfillConfirm = true } label: {
+                    HStack(spacing: 8) {
+                        if isBackfilling {
+                            ProgressView().tint(.black)
+                        } else {
+                            Image(systemName: "globe.americas.fill")
+                            Text("Backfill World Rankings")
+                        }
+                    }
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.gold, in: RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(isBackfilling)
+                .padding(.horizontal).padding(.top, 8)
+
+                if let backfillMessage {
+                    Text(backfillMessage)
+                        .font(.caption.bold()).foregroundStyle(Theme.success)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.horizontal).padding(.top, 6)
+                }
+
                 HStack {
                     Image(systemName: "magnifyingglass").foregroundStyle(Theme.textSecondary)
                     TextField("Search users…", text: $searchText)
@@ -521,6 +551,12 @@ struct SuperAdminUsersTab: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        .alert("Backfill World Rankings?", isPresented: $showBackfillConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Backfill", role: .destructive) { Task { await backfillWorldRankings() } }
+        } message: {
+            Text("Assigns every user a World Ranking based on signup order (earliest = #1). Overwrites any existing ranks. Run once before launch.")
+        }
     }
 
     private func load() async {
@@ -528,5 +564,20 @@ struct SuperAdminUsersTab: View {
         do { users = try await service.fetchAllUsers() }
         catch { errorMsg = error.localizedDescription }
         isLoading = false
+    }
+
+    /// Assigns sequential worldRank values to every user, ordered by createdAt ascending,
+    /// then writes the final count back to meta/worldRankCounter so new signups continue
+    /// from N+1.
+    private func backfillWorldRankings() async {
+        isBackfilling = true; backfillMessage = nil; errorMsg = nil
+        defer { isBackfilling = false }
+        do {
+            let count = try await service.backfillWorldRankings()
+            backfillMessage = "Assigned ranks to \(count) user\(count == 1 ? "" : "s")."
+            await load()
+        } catch {
+            errorMsg = error.localizedDescription
+        }
     }
 }

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>697556370591-cf38ooits68kdnc1am50jaii40r7j9bq.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.697556370591-cf38ooits68kdnc1am50jaii40r7j9bq</string>
 	<key>API_KEY</key>
 	<string>AIzaSyCk1wYfRCpL9MWgV73eQnU_hiYnv9HWM3s</string>
 	<key>GCM_SENDER_ID</key>
@@ -9,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.schusterick.DiscGolfRankings</string>
+	<string>com.discgolfrankings.app</string>
 	<key>PROJECT_ID</key>
 	<string>discgolfrankings</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:697556370591:ios:329c31a91f7fa31efc0eaa</string>
+	<string>1:697556370591:ios:0feb512d4f364777fc0eaa</string>
 </dict>
 </plist>

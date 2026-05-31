@@ -376,12 +376,46 @@ struct ClubSearchView: View {
     @State private var showPaymentView = false
     @State private var paymentClub:    Club?
     @State private var searchText     = ""
+    @State private var cityFilter     = ""
+    @State private var stateFilter    = ""
+    @State private var searchMode:    SearchMode = .all
     @State private var infoClub:       Club?
 
+    enum SearchMode: String, CaseIterable {
+        case all   = "All"
+        case city  = "City"
+        case state = "State"
+    }
+
+    /// Splits a Club's `location` string ("City, ST") into the (city, state) pair.
+    private func splitLocation(_ s: String) -> (city: String, state: String) {
+        let parts = s.split(separator: ",", maxSplits: 1).map {
+            $0.trimmingCharacters(in: .whitespaces)
+        }
+        let city  = parts.first ?? ""
+        let state = parts.count > 1 ? parts.last! : ""
+        return (city, state)
+    }
+
     private var filteredClubs: [Club] {
-        searchText.isEmpty ? clubs : clubs.filter { c in
-            c.name.localizedCaseInsensitiveContains(searchText)
-            || c.location.localizedCaseInsensitiveContains(searchText)
+        switch searchMode {
+        case .all:
+            return searchText.isEmpty ? clubs : clubs.filter { c in
+                c.name.localizedCaseInsensitiveContains(searchText)
+                || c.location.localizedCaseInsensitiveContains(searchText)
+            }
+        case .city:
+            let needle = cityFilter.trimmingCharacters(in: .whitespaces)
+            guard !needle.isEmpty else { return clubs }
+            return clubs.filter { c in
+                splitLocation(c.location).city.localizedCaseInsensitiveContains(needle)
+            }
+        case .state:
+            guard !stateFilter.isEmpty else { return clubs }
+            return clubs.filter { c in
+                splitLocation(c.location).state
+                    .caseInsensitiveCompare(stateFilter) == .orderedSame
+            }
         }
     }
 
@@ -391,25 +425,62 @@ struct ClubSearchView: View {
                 Theme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Search bar
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(Theme.textSecondary)
-                        TextField("Search clubs by name or location…", text: $searchText)
-                            .foregroundStyle(Theme.textPrimary)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                        if !searchText.isEmpty {
-                            Button { searchText = "" } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Theme.textSecondary)
-                            }
+                    // Mode picker
+                    Picker("Search by", selection: $searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { m in
+                            Text(m.rawValue).tag(m)
                         }
                     }
-                    .padding(10)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+                    .pickerStyle(.segmented)
                     .padding(.horizontal)
-                    .padding(.vertical, 8)
+                    .padding(.top, 8)
+
+                    // Mode-specific input
+                    Group {
+                        switch searchMode {
+                        case .all:
+                            searchField(
+                                icon: "magnifyingglass",
+                                placeholder: "Search clubs by name or location…",
+                                text: $searchText
+                            )
+                        case .city:
+                            searchField(
+                                icon: "building.2.fill",
+                                placeholder: "Enter a city (e.g. Dalton)",
+                                text: $cityFilter
+                            )
+                        case .state:
+                            HStack(spacing: 8) {
+                                Image(systemName: "map.fill").foregroundStyle(Theme.textSecondary)
+                                Menu {
+                                    Button("Any state") { stateFilter = "" }
+                                    ForEach(RequestClubView.usStates, id: \.self) { st in
+                                        Button(st) { stateFilter = st }
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(stateFilter.isEmpty ? "Pick a state" : stateFilter)
+                                            .foregroundStyle(stateFilter.isEmpty ? Theme.textSecondary : Theme.textPrimary)
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.textSecondary)
+                                    }
+                                }
+                                if !stateFilter.isEmpty {
+                                    Button { stateFilter = "" } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(Theme.textSecondary)
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                        }
+                    }
 
                     Text("\(filteredClubs.count) club\(filteredClubs.count == 1 ? "" : "s")")
                         .font(.caption.bold()).foregroundStyle(Theme.textSecondary)
@@ -474,6 +545,27 @@ struct ClubSearchView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private func searchField(icon: String, placeholder: String, text: Binding<String>) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).foregroundStyle(Theme.textSecondary)
+            TextField(placeholder, text: text)
+                .foregroundStyle(Theme.textPrimary)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if !text.wrappedValue.isEmpty {
+                Button { text.wrappedValue = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        }
+        .padding(10)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
 
     private func load() async {

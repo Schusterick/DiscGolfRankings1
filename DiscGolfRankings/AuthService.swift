@@ -28,6 +28,8 @@ class AuthService: ObservableObject {
                 self?.currentUser = user
                 if let user {
                     await self?.fetchAppUser(uid: user.uid)
+                    // Push the current FCM token onto the newly signed-in user's doc.
+                    PushNotificationService.shared.rebroadcastTokenToCurrentUser()
                 } else {
                     self?.appUser = nil
                 }
@@ -65,22 +67,27 @@ class AuthService: ObservableObject {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, displayName: String) async {
+    /// Email/password signup. Does NOT collect a display name — that's gated through
+    /// the required CompleteProfileView right after signup, alongside years playing.
+    func signUp(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
         do {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
-            let changeRequest = result.user.createProfileChangeRequest()
-            changeRequest.displayName = displayName
-            try await changeRequest.commitChanges()
-
+            let assignedRank = (try? await Self.assignNextWorldRank()) ?? nil
             let newUser = AppUser(
                 id: result.user.uid,
                 email: email,
-                displayName: displayName,
-                createdAt: Date()
+                displayName: "",              // filled in by CompleteProfileView
+                createdAt: Date(),
+                worldRank: assignedRank,
+                worldRankOptOut: false
             )
             try db.collection("users").document(result.user.uid).setData(from: newUser)
+            // Race-fix: the auth-state listener already fired a fetchAppUser that
+            // raced this write and found nothing. Set appUser directly here so the
+            // AppEntry router moves on instead of sitting on the loading spinner.
+            self.appUser = newUser
         } catch {
             errorMessage = error.localizedDescription
             UINotificationFeedbackGenerator().notificationOccurred(.error)
@@ -163,13 +170,21 @@ class AuthService: ObservableObject {
                 let userDoc = db.collection("users").document(user.uid)
                 let existing = try? await userDoc.getDocument()
                 if existing?.exists != true {
+                    let assignedRank = (try? await Self.assignNextWorldRank()) ?? nil
+                    // If Apple shared the name, use it. Otherwise leave displayName empty
+                    // so the CompleteProfileView gate forces the user to enter it.
+                    let resolvedName = displayName.isEmpty ? (user.displayName ?? "") : displayName
                     let appUserDoc = AppUser(
-                        id:          user.uid,
-                        email:       user.email ?? credential.email ?? "",
-                        displayName: displayName.isEmpty ? (user.displayName ?? "Player") : displayName,
-                        createdAt:   Date()
+                        id:              user.uid,
+                        email:           user.email ?? credential.email ?? "",
+                        displayName:     resolvedName,
+                        createdAt:       Date(),
+                        worldRank:       assignedRank,
+                        worldRankOptOut: false
                     )
                     try? userDoc.setData(from: appUserDoc)
+                    // Race-fix: unblock the AppEntry router from the loading spinner.
+                    self.appUser = appUserDoc
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -323,18 +338,53 @@ class AuthService: ObservableObject {
     // MARK: - Helpers shared by all OAuth flows
 
     /// Creates the Firestore users/{uid} doc on first sign-in. No-op for returning users.
+    /// Leaves displayName empty if the provider didn't share one — the CompleteProfileView
+    /// gate will force the user to enter it.
     private func createUserDocIfNeeded(_ user: User, displayName: String?) async {
         let ref = db.collection("users").document(user.uid)
         let existing = try? await ref.getDocument()
         guard existing?.exists != true else { return }
-        let name = displayName ?? user.displayName ?? "Player"
+        let name = displayName ?? user.displayName ?? ""
+        let assignedRank = (try? await Self.assignNextWorldRank()) ?? nil
         let appUser = AppUser(
-            id:          user.uid,
-            email:       user.email ?? "",
-            displayName: name,
-            createdAt:   Date()
+            id:              user.uid,
+            email:           user.email ?? "",
+            displayName:     name,
+            createdAt:       Date(),
+            worldRank:       assignedRank,
+            worldRankOptOut: false
         )
         try? ref.setData(from: appUser)
+        // Race-fix: unblock the AppEntry router from the loading spinner.
+        self.appUser = appUser
+    }
+
+    /// Atomically increments the global world-rank counter (`meta/worldRankCounter`)
+    /// and returns the next integer to assign to a brand-new user. Uses a Firestore
+    /// transaction so concurrent signups never collide on the same number.
+    static func assignNextWorldRank() async throws -> Int {
+        let db = Firestore.firestore()
+        let counterRef = db.collection("meta").document("worldRankCounter")
+        return try await withCheckedThrowingContinuation { cont in
+            db.runTransaction({ txn, errorPointer -> Any? in
+                let snap: DocumentSnapshot
+                do {
+                    snap = try txn.getDocument(counterRef)
+                } catch let err as NSError {
+                    errorPointer?.pointee = err
+                    return nil
+                }
+                let current = (snap.data()?["count"] as? Int) ?? 0
+                let next = current + 1
+                txn.setData(["count": next], forDocument: counterRef, merge: true)
+                return next
+            }) { result, err in
+                if let err = err { cont.resume(throwing: err); return }
+                if let n = result as? Int { cont.resume(returning: n) }
+                else { cont.resume(throwing: NSError(domain: "WorldRank", code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Counter returned non-Int"])) }
+            }
+        }
     }
 
     /// Returns the top-most UIViewController for presenting OAuth flows.

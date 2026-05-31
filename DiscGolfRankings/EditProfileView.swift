@@ -28,6 +28,10 @@ struct EditProfileView: View {
     @State private var tiktok:    String = ""
     @State private var favoriteCourse: String = ""
     @State private var yearsPlayingStr: String = ""
+    @State private var pdgaNumber: String = ""
+    @State private var worldRankHidden: Bool = false
+    @State private var pushEnabled: Bool = true
+    @State private var notificationPrefs: [String: Bool] = [:]
 
     @State private var isSaving = false
     @State private var errorMsg: String?
@@ -100,6 +104,13 @@ struct EditProfileView: View {
                     // MARK: Disc-golf fun facts
                     Section("Disc Golf") {
                         HStack {
+                            Image(systemName: "number").foregroundStyle(Theme.gold).frame(width: 24)
+                            TextField("PDGA number", text: $pdgaNumber)
+                                .foregroundStyle(Theme.textPrimary)
+                                .keyboardType(.numberPad)
+                                .autocorrectionDisabled()
+                        }
+                        HStack {
                             Image(systemName: "flag.fill").foregroundStyle(Theme.gold).frame(width: 24)
                             TextField("Favorite course", text: $favoriteCourse)
                                 .foregroundStyle(Theme.textPrimary)
@@ -109,6 +120,74 @@ struct EditProfileView: View {
                             TextField("Years playing", text: $yearsPlayingStr)
                                 .foregroundStyle(Theme.textPrimary)
                                 .keyboardType(.numberPad)
+                        }
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // MARK: World Ranking visibility
+                    Section(
+                        header: Text("World Ranking").foregroundStyle(Theme.textSecondary),
+                        footer: Text("Your world rank is based on signup order. Hide yourself from the global leaderboard if you don't want to be listed.")
+                            .font(.caption2).foregroundStyle(Theme.textSecondary)
+                    ) {
+                        Toggle(isOn: $worldRankHidden) {
+                            HStack {
+                                Image(systemName: "globe.americas.fill")
+                                    .foregroundStyle(Theme.gold).frame(width: 24)
+                                Text("Hide me from World Ranking")
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                        }
+                        .tint(Theme.accent)
+                    }
+                    .listRowBackground(Theme.card)
+
+                    // MARK: Notifications
+                    Section(
+                        header: Text("Notifications").foregroundStyle(Theme.textSecondary),
+                        footer: Text("Turn off the master switch to silence all push notifications. The in-app notifications bell still updates. Individual toggles let you pick which categories ping you on the lock screen.")
+                            .font(.caption2).foregroundStyle(Theme.textSecondary)
+                    ) {
+                        Toggle(isOn: $pushEnabled) {
+                            HStack {
+                                Image(systemName: "bell.fill")
+                                    .foregroundStyle(Theme.gold).frame(width: 24)
+                                Text("Push notifications")
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                        }
+                        .tint(Theme.accent)
+
+                        if pushEnabled {
+                            DisclosureGroup {
+                                ForEach(notifGroup_aboutMe, id: \.self) { t in
+                                    prefRow(t)
+                                }
+                            } label: {
+                                Label("About me", systemImage: "person.fill")
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                            .tint(Theme.accent)
+
+                            DisclosureGroup {
+                                ForEach(notifGroup_fromClubs, id: \.self) { t in
+                                    prefRow(t)
+                                }
+                            } label: {
+                                Label("From my clubs", systemImage: "person.3.fill")
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                            .tint(Theme.accent)
+
+                            DisclosureGroup {
+                                ForEach(notifGroup_adminOnly, id: \.self) { t in
+                                    prefRow(t)
+                                }
+                            } label: {
+                                Label("Club admin", systemImage: "shield.fill")
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                            .tint(Theme.accent)
                         }
                     }
                     .listRowBackground(Theme.card)
@@ -168,6 +247,29 @@ struct EditProfileView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    // MARK: Notification preference groupings + helpers
+
+    private var notifGroup_aboutMe: [NotificationType] {
+        [.challengeReceived, .challengeResponded, .scoreConfirmationNeeded, .roundConfirmed]
+    }
+    private var notifGroup_fromClubs: [NotificationType] {
+        [.clubBroadcast, .eventCreated, .eventReminder, .eventCancelled, .clubApproved]
+    }
+    private var notifGroup_adminOnly: [NotificationType] {
+        [.newClubMember, .subscriptionExpiring, .clubApplicationSubmitted]
+    }
+
+    @ViewBuilder
+    private func prefRow(_ t: NotificationType) -> some View {
+        Toggle(isOn: Binding(
+            get: { notificationPrefs[t.rawValue] ?? true },
+            set: { notificationPrefs[t.rawValue] = $0 }
+        )) {
+            Text(t.displayName).foregroundStyle(Theme.textPrimary)
+        }
+        .tint(Theme.accent)
     }
 
     // MARK: Avatar preview
@@ -242,6 +344,10 @@ struct EditProfileView: View {
         tiktok          = u?.tiktok          ?? ""
         favoriteCourse  = u?.favoriteCourse  ?? ""
         yearsPlayingStr = u?.yearsPlaying.map { String($0) } ?? ""
+        pdgaNumber      = u?.pdgaNumber      ?? ""
+        worldRankHidden = u?.worldRankOptOut ?? false
+        pushEnabled       = u?.notifyEnabled ?? true
+        notificationPrefs = u?.notificationPrefs ?? [:]
 
         // Split current displayName into first/last for editing
         let full = (u?.displayName ?? auth.currentUser?.displayName ?? "")
@@ -279,7 +385,11 @@ struct EditProfileView: View {
                 twitter:        twitter.trimmingCharacters(in: .whitespaces),
                 tiktok:         tiktok.trimmingCharacters(in: .whitespaces),
                 favoriteCourse: favoriteCourse.trimmingCharacters(in: .whitespaces),
-                yearsPlaying:   Int(yearsPlayingStr.trimmingCharacters(in: .whitespaces))
+                yearsPlaying:   Int(yearsPlayingStr.trimmingCharacters(in: .whitespaces)),
+                pdgaNumber:     pdgaNumber.trimmingCharacters(in: .whitespaces),
+                worldRankOptOut: worldRankHidden,
+                notifyEnabled:    pushEnabled,
+                notificationPrefs: notificationPrefs
             )
 
             // 2. Keep Firebase Auth in sync with the new display name

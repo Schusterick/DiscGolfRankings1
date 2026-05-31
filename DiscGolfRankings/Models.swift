@@ -18,11 +18,63 @@ struct AppUser: Identifiable, Codable {
     var tiktok:          String?
     var favoriteCourse:  String?    // e.g. "Maple Hill"
     var yearsPlaying:    Int?       // 0..50
+    var pdgaNumber:      String?    // optional PDGA membership #
+
+    // World Ranking — assigned on signup (signup-order), opt-out toggles visibility
+    var worldRank:       Int?       // nil for legacy users until backfilled
+    var worldRankOptOut: Bool?      // nil/false = visible in World Ranking, true = hidden
+
+    // Push notifications
+    var fcmToken:          String?              // current device's FCM token (refreshed on launch)
+    var notifyEnabled:     Bool?                // master kill switch — nil/true = push allowed
+    var notificationPrefs: [String: Bool]?      // per-type opt-outs. Missing key = enabled (opt-out, not opt-in)
 
     enum CodingKeys: String, CodingKey {
         case id, email, displayName, createdAt
         case photoURL, bio, instagram, facebook, twitter, tiktok
-        case favoriteCourse, yearsPlaying
+        case favoriteCourse, yearsPlaying, pdgaNumber
+        case worldRank, worldRankOptOut
+        case fcmToken, notifyEnabled, notificationPrefs
+    }
+}
+
+// MARK: - NotificationType
+// Canonical category list. Used as the `type` field on AppNotification and
+// as the key in AppUser.notificationPrefs. Server-side push fan-out reads
+// `type` to look up the per-category toggle before sending APNs.
+
+enum NotificationType: String, Codable, CaseIterable {
+    case clubApproved              = "clubApproved"
+    case clubApplicationSubmitted  = "clubApplicationSubmitted"
+    case newClubMember             = "newClubMember"
+    case clubBroadcast             = "clubBroadcast"
+    case subscriptionExpiring      = "subscriptionExpiring"
+    case challengeReceived         = "challengeReceived"
+    case challengeResponded        = "challengeResponded"
+    case scoreConfirmationNeeded   = "scoreConfirmationNeeded"
+    case roundConfirmed            = "roundConfirmed"
+    case eventCreated              = "eventCreated"
+    case eventReminder             = "eventReminder"
+    case eventCancelled            = "eventCancelled"
+    case general                   = "general"   // legacy untyped docs
+
+    /// Human-friendly label for the Notifications-prefs UI.
+    var displayName: String {
+        switch self {
+        case .clubApproved:             return "Club Approval"
+        case .clubApplicationSubmitted: return "New Club Applications"
+        case .newClubMember:            return "New Club Members"
+        case .clubBroadcast:            return "Club Broadcasts"
+        case .subscriptionExpiring:     return "Subscription Reminders"
+        case .challengeReceived:        return "Challenges"
+        case .challengeResponded:       return "Challenge Responses"
+        case .scoreConfirmationNeeded:  return "Score Confirmations"
+        case .roundConfirmed:           return "Round Results"
+        case .eventCreated:             return "New Events"
+        case .eventReminder:            return "Event Reminders"
+        case .eventCancelled:           return "Event Cancellations"
+        case .general:                  return "General"
+        }
     }
 }
 
@@ -372,6 +424,17 @@ struct AppNotification: Identifiable, Codable {
     var message: String
     var isRead: Bool
     var createdAt: Date
+    // Routing / opt-out category. Legacy docs without this field decode as nil
+    // and are treated as `.general` by readers.
+    var type: String?
+    // Optional payload for deep-link routing (e.g. clubId, challengeId, roundId)
+    var meta: [String: String]?
+
+    /// Convenience accessor — falls back to `.general` for pre-typed legacy docs.
+    var typedCategory: NotificationType {
+        guard let raw = type, let t = NotificationType(rawValue: raw) else { return .general }
+        return t
+    }
 }
 
 // MARK: - RoundRecord

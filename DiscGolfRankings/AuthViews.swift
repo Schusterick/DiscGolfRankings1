@@ -195,8 +195,6 @@ struct SignInView: View {
 struct SignUpView: View {
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) var dismiss
-    @State private var firstName = ""
-    @State private var lastName  = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -205,8 +203,6 @@ struct SignUpView: View {
 
     private var passwordsMatch: Bool { password == confirmPassword }
     private var canSubmit: Bool {
-        !firstName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !lastName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.isEmpty && password.count >= 6 && passwordsMatch && !auth.isLoading
     }
 
@@ -215,18 +211,6 @@ struct SignUpView: View {
             ZStack {
                 Theme.background.ignoresSafeArea()
                 Form {
-                    Section("Your Name") {
-                        TextField("First Name", text: $firstName)
-                            .foregroundStyle(Theme.textPrimary)
-                            .textContentType(.givenName)
-                            .autocorrectionDisabled()
-                        TextField("Last Name", text: $lastName)
-                            .foregroundStyle(Theme.textPrimary)
-                            .textContentType(.familyName)
-                            .autocorrectionDisabled()
-                    }
-                    .listRowBackground(Theme.card)
-
                     Section("Credentials") {
                         TextField("Email", text: $email)
                             .foregroundStyle(Theme.textPrimary)
@@ -279,10 +263,10 @@ struct SignUpView: View {
                                 .foregroundStyle(Theme.gold)
                                 .padding(.top, 2)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Heads up")
+                                Text("Next: tell us about you")
                                     .font(.caption.bold())
                                     .foregroundStyle(Theme.textPrimary)
-                                Text("Once you join a club, the club admin may contact you about leagues, tournaments, and other events. Your email is only visible to club admins of clubs you join — never to other players.")
+                                Text("After this you'll add your name and a few quick details so clubs and leaderboards know who you are. Your email stays private — only visible to admins of clubs you join.")
                                     .font(.caption2)
                                     .foregroundStyle(Theme.textSecondary)
                             }
@@ -307,14 +291,13 @@ struct SignUpView: View {
                     Section {
                         Button {
                             Task {
-                                let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))"
-                                await auth.signUp(email: email, password: password, displayName: fullName)
+                                await auth.signUp(email: email, password: password)
                                 if auth.errorMessage == nil { dismiss() }
                             }
                         } label: {
                             Group {
                                 if auth.isLoading { ProgressView().tint(.white) }
-                                else { Text("Create Account").fontWeight(.semibold).foregroundStyle(.white) }
+                                else { Text("Continue").fontWeight(.semibold).foregroundStyle(.white) }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)

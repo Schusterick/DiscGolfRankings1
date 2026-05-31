@@ -11,6 +11,17 @@ import FBSDKCoreKit
 struct DiscGolfRankingsApp: App {
     @StateObject private var auth = AuthService()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @UIApplicationDelegateAdaptor(DGRAppDelegate.self) private var appDelegate
+
+    /// A profile is "complete" once the user has both a real display name
+    /// (not blank, not the legacy "Player" placeholder) AND years playing set.
+    /// Anything less and AppEntry routes them to CompleteProfileView.
+    static func needsProfileCompletion(_ u: AppUser) -> Bool {
+        let trimmedName = u.displayName.trimmingCharacters(in: .whitespaces)
+        let nameMissing = trimmedName.isEmpty || trimmedName == "Player"
+        let yearsMissing = u.yearsPlaying == nil
+        return nameMissing || yearsMissing
+    }
 
     init() {
         FirebaseApp.configure()
@@ -18,6 +29,11 @@ struct DiscGolfRankingsApp: App {
         // TODO: After adding Stripe SDK via SPM, uncomment the import in StripeService.swift
         //       and the STPAPIClient line inside StripeService.configure()
         StripeService.shared.configure()
+        // Push notifications: request permission, register with APNs, start receiving FCM tokens.
+        // Safe to call even if FirebaseMessaging isn't linked yet — it no-ops behind a canImport guard.
+        Task { @MainActor in
+            PushNotificationService.shared.configure()
+        }
         #if canImport(FBSDKCoreKit)
         // Facebook SDK initializes itself from the AppDelegate-style call below — we
         // pass a minimal launchOptions dict because we don't have a real UIApplicationDelegate
@@ -29,12 +45,23 @@ struct DiscGolfRankingsApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                // Routing order: sign-in always comes first.
-                //  - Not signed in → SignInView (immediate account prompt)
-                //  - Signed in + onboarding not yet seen → OnboardingView (post-signup tour)
-                //  - Signed in + onboarding done → MainTabView
+                // Routing order, top to bottom:
+                //  1. Not signed in → SignInView
+                //  2. Signed in but appUser still loading → brief ProgressView
+                //  3. Signed in but profile incomplete (no displayName OR no yearsPlaying)
+                //     → CompleteProfileView (HARD GATE — cannot be skipped)
+                //  4. Signed in + profile complete + onboarding not seen → OnboardingView
+                //  5. Signed in + profile + onboarding done → MainTabView
                 if !auth.isSignedIn {
                     SignInView()
+                        .environmentObject(auth)
+                } else if auth.appUser == nil {
+                    ZStack {
+                        Theme.background.ignoresSafeArea()
+                        ProgressView().tint(Theme.accent)
+                    }
+                } else if Self.needsProfileCompletion(auth.appUser!) {
+                    CompleteProfileView()
                         .environmentObject(auth)
                 } else if !hasSeenOnboarding {
                     OnboardingView()
@@ -79,23 +106,26 @@ struct MainTabView: View {
             LeaderboardView()
                 .tabItem { Label("Leaderboard", systemImage: "list.number") }
                 .tag(1)
+            WorldRankingView()
+                .tabItem { Label("World",       systemImage: "globe.americas.fill") }
+                .tag(2)
             ProfileView()
                 .tabItem { Label("Profile",     systemImage: "person.circle.fill") }
-                .tag(2)
+                .tag(3)
             if auth.isSuperAdmin {
                 SuperAdminView()
                     .tabItem { Label("Super",   systemImage: "crown.fill") }
-                    .tag(3)
+                    .tag(4)
             } else if auth.isAppAdmin {
                 AdminTabView()
                     .tabItem { Label("Admin",   systemImage: "shield.checkered") }
-                    .tag(3)
+                    .tag(4)
             }
         }
         .tint(Theme.accent)
         .onAppear {
-            // Honor onboarding intent — if the user tapped "Request a Club" on the
-            // last page of onboarding, drop them straight into the request form.
+            // Onboarding intent from OnboardingView's "Start a Club" button:
+            // jump straight into the Request Club form.
             if onboardingIntent == "request" {
                 showRequestClubFromIntent = true
             }
@@ -324,26 +354,33 @@ struct ProfileView: View {
 
             // Disc-golf fun facts
             if let user = auth.appUser, hasAnyFunFact(user) {
-                HStack(spacing: 14) {
+                HStack(spacing: 8) {
+                    if let pdga = user.pdgaNumber, !pdga.isEmpty {
+                        Label("PDGA #\(pdga)", systemImage: "number")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Theme.success.opacity(0.15), in: Capsule())
+                            .foregroundStyle(Theme.success)
+                    }
                     if let course = user.favoriteCourse, !course.isEmpty {
                         Label(course, systemImage: "flag.fill")
                             .font(.caption.bold())
-                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
                             .padding(.horizontal, 10).padding(.vertical, 6)
                             .background(Theme.gold.opacity(0.15), in: Capsule())
                             .foregroundStyle(Theme.gold)
                     }
                     if let years = user.yearsPlaying {
-                        Label(years == 1 ? "1 yr playing" : "\(years) yrs playing",
+                        Label(years == 1 ? "1 yr" : "\(years) yrs",
                               systemImage: "calendar")
                             .font(.caption.bold())
-                            .foregroundStyle(Theme.textPrimary)
                             .padding(.horizontal, 10).padding(.vertical, 6)
                             .background(Theme.accent.opacity(0.15), in: Capsule())
                             .foregroundStyle(Theme.accent)
                     }
                 }
                 .padding(.top, 6)
+                .padding(.horizontal, 16)
             }
         }
         .frame(maxWidth: .infinity)
@@ -356,7 +393,9 @@ struct ProfileView: View {
     }
 
     private func hasAnyFunFact(_ u: AppUser) -> Bool {
-        !(u.favoriteCourse?.isEmpty ?? true) || u.yearsPlaying != nil
+        !(u.favoriteCourse?.isEmpty ?? true)
+            || u.yearsPlaying != nil
+            || !(u.pdgaNumber?.isEmpty ?? true)
     }
 
     // MARK: Stats Row
@@ -369,6 +408,11 @@ struct ProfileView: View {
             Divider().frame(height: 36).background(Theme.divider)
             statCell(value: s.averageRank.map { String(format: "#%.1f", $0) } ?? "—",
                      label: "Avg Tag")
+            Divider().frame(height: 36).background(Theme.divider)
+            statCell(
+                value: auth.appUser?.worldRank.map { "#\($0)" } ?? "—",
+                label: "World"
+            )
         }
         .padding(.vertical, 14)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))

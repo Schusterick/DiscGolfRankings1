@@ -231,9 +231,26 @@ class FirebaseService: ObservableObject {
             subscriptionStartedAt: now,
             subscriptionExpiresAt: trialEnd
         )
-        try db.collection("clubs").addDocument(from: club)
+        let ref = try db.collection("clubs").addDocument(from: club)
         try await db.collection("clubApplications").document(appId)
             .updateData(["status": "approved"])
+        // Auto-enroll the applicant as the first member + club admin so they don't
+        // have to search for their own club and join manually. joinClub() handles
+        // tag assignment (gets #1 as the first member), isAdmin flag, and bumping
+        // the club's memberCount.
+        try? await joinClub(
+            userId:       application.applicantUserId,
+            userFullName: application.applicantName,
+            clubId:       ref.documentID,
+            userEmail:    application.contactEmail
+        )
+        // Notify the applicant (now the club admin AND member #1) that their club is live.
+        _ = try? await createNotification(
+            userId: application.applicantUserId,
+            message: "🎉 Your club \"\(application.clubName)\" was approved! Free for the first 60 days. You're already member #1.",
+            type: .clubApproved,
+            meta: ["clubId": ref.documentID]
+        )
     }
 
     // MARK: - Club subscriptions (hybrid pricing model)
@@ -340,7 +357,17 @@ class FirebaseService: ObservableObject {
             "status":          PendingRound.PendingRoundStatus.pending.rawValue
         ]
 
-        try await db.collection("pendingRounds").addDocument(data: data)
+        let ref = try await db.collection("pendingRounds").addDocument(data: data)
+
+        // Notify every player EXCEPT the submitter — they need to confirm scores.
+        for uid in playerIds where uid != submittedBy {
+            _ = try? await createNotification(
+                userId: uid,
+                message: "✋ \(submittedByName) submitted scores — confirm to lock in the new tags.",
+                type: .scoreConfirmationNeeded,
+                meta: ["roundId": ref.documentID, "clubId": clubId]
+            )
+        }
     }
 
     /// Fetch all pending rounds the user is part of that still need confirmation.
@@ -419,6 +446,23 @@ class FirebaseService: ObservableObject {
         )
 
         try await batch.commit()
+
+        // Notify every player that the round is finalized + their new tag.
+        for playerId in round.playerIds {
+            let oldTag = round.tagsBefore[playerId] ?? 0
+            let newTag = round.tagsAfter[playerId] ?? 0
+            let delta = oldTag - newTag   // positive = went UP (lower number)
+            let blurb: String
+            if delta > 0 { blurb = "Tag went up: #\(oldTag) → #\(newTag)" }
+            else if delta < 0 { blurb = "Tag dropped: #\(oldTag) → #\(newTag)" }
+            else { blurb = "Tag unchanged at #\(newTag)" }
+            _ = try? await createNotification(
+                userId: playerId,
+                message: "✅ Round finalized. \(blurb)",
+                type: .roundConfirmed,
+                meta: ["roundId": roundId, "clubId": round.clubId]
+            )
+        }
     }
 
     // MARK: - Group Rounds
@@ -665,7 +709,9 @@ class FirebaseService: ObservableObject {
         let dateStr = event.startDate.formatted(date: .abbreviated, time: .shortened)
         try? await sendNotificationToAllClubMembersInternal(
             clubId: event.clubId,
-            message: "📅 New event: \(event.title) — \(dateStr)"
+            message: "📅 New event: \(event.title) — \(dateStr)",
+            type: .eventCreated,
+            meta: ["eventId": ref.documentID]
         )
         return ref.documentID
     }
@@ -705,7 +751,9 @@ class FirebaseService: ObservableObject {
         ])
         try? await sendNotificationToAllClubMembersInternal(
             clubId: event.clubId,
-            message: "❌ Event cancelled: \(event.title)"
+            message: "❌ Event cancelled: \(event.title)",
+            type: .eventCancelled,
+            meta: ["eventId": eid]
         )
     }
 
@@ -797,7 +845,12 @@ class FirebaseService: ObservableObject {
     }
 
     // MARK: - Helper: broadcast (used by createEvent / cancelEvent)
-    private func sendNotificationToAllClubMembersInternal(clubId: String, message: String) async throws {
+    private func sendNotificationToAllClubMembersInternal(
+        clubId: String,
+        message: String,
+        type: NotificationType = .general,
+        meta: [String: String] = [:]
+    ) async throws {
         let snap = try await db.collection("memberships")
             .whereField("clubId", isEqualTo: clubId)
             .whereField("isActive", isEqualTo: true)
@@ -805,27 +858,41 @@ class FirebaseService: ObservableObject {
         let members = snap.documents.compactMap { try? $0.data(as: Membership.self) }
         guard !members.isEmpty else { return }
         let batch = db.batch()
+        var enrichedMeta = meta
+        enrichedMeta["clubId"] = clubId
         for m in members {
             let ref = db.collection("notifications").document()
             batch.setData([
                 "userId":    m.userId,
                 "message":   message,
                 "isRead":    false,
-                "createdAt": Timestamp(date: Date())
+                "createdAt": Timestamp(date: Date()),
+                "type":      type.rawValue,
+                "meta":      enrichedMeta
             ], forDocument: ref)
         }
         try await batch.commit()
     }
 
     /// Sends an in-app notification to every active member of a club.
-    /// Used by club admins to broadcast announcements. Returns the count delivered.
-    func sendNotificationToAllClubMembers(clubId: String, message: String) async throws -> Int {
+    /// Used by club admins to broadcast announcements (default) AND by event-
+    /// reminder buttons (which override type to `.eventReminder`).
+    /// Returns the count delivered.
+    func sendNotificationToAllClubMembers(
+        clubId: String,
+        message: String,
+        type: NotificationType = .clubBroadcast,
+        meta: [String: String] = [:]
+    ) async throws -> Int {
         let snap = try await db.collection("memberships")
             .whereField("clubId", isEqualTo: clubId)
             .whereField("isActive", isEqualTo: true)
             .getDocuments()
         let members = snap.documents.compactMap { try? $0.data(as: Membership.self) }
         guard !members.isEmpty else { return 0 }
+
+        var enrichedMeta = meta
+        enrichedMeta["clubId"] = clubId
 
         let batch = db.batch()
         for m in members {
@@ -834,11 +901,32 @@ class FirebaseService: ObservableObject {
                 "userId":    m.userId,
                 "message":   message,
                 "isRead":    false,
-                "createdAt": Timestamp(date: Date())
+                "createdAt": Timestamp(date: Date()),
+                "type":      type.rawValue,
+                "meta":      enrichedMeta
             ], forDocument: ref)
         }
         try await batch.commit()
         return members.count
+    }
+
+    /// Single-recipient notification helper. The single chokepoint every iOS-side
+    /// trigger should use, so every doc lands with a `type` + `meta` for routing
+    /// and per-category opt-out checks server-side.
+    func createNotification(
+        userId: String,
+        message: String,
+        type: NotificationType,
+        meta: [String: String] = [:]
+    ) async throws {
+        try await db.collection("notifications").addDocument(data: [
+            "userId":    userId,
+            "message":   message,
+            "isRead":    false,
+            "createdAt": Timestamp(date: Date()),
+            "type":      type.rawValue,
+            "meta":      meta
+        ])
     }
 
     // Updated joinClub — adds email, isAdmin check, welcome notification
@@ -893,12 +981,12 @@ class FirebaseService: ObservableObject {
             adminUIDs.remove(userId)
             let clubName = club.name
             for aid in adminUIDs {
-                _ = try? await db.collection("notifications").addDocument(data: [
-                    "userId":    aid,
-                    "message":   "👤 \(userFullName) just joined \(clubName)!",
-                    "isRead":    false,
-                    "createdAt": Timestamp(date: Date())
-                ])
+                _ = try? await createNotification(
+                    userId: aid,
+                    message: "👤 \(userFullName) just joined \(clubName)!",
+                    type: .newClubMember,
+                    meta: ["clubId": clubId, "newMemberId": userId]
+                )
             }
         }
     }
@@ -954,6 +1042,43 @@ class FirebaseService: ObservableObject {
     func fetchAllUsers() async throws -> [AppUser] {
         let snap = try await db.collection("users").getDocuments()
         return snap.documents.compactMap { try? $0.data(as: AppUser.self) }
+    }
+
+    /// One-time backfill: fetches every user, orders them by createdAt ascending,
+    /// and assigns sequential worldRank values 1..N. Updates `meta/worldRankCounter`
+    /// so newly-created users continue from N+1. Returns the total user count.
+    func backfillWorldRankings() async throws -> Int {
+        let snap = try await db.collection("users")
+            .order(by: "createdAt", descending: false)
+            .getDocuments()
+        let batch = db.batch()
+        var assigned = 0
+        for (idx, doc) in snap.documents.enumerated() {
+            let rank = idx + 1
+            batch.updateData(["worldRank": rank], forDocument: doc.reference)
+            assigned += 1
+        }
+        // Update the counter so the next signup gets N+1
+        let counterRef = db.collection("meta").document("worldRankCounter")
+        batch.setData(["count": assigned], forDocument: counterRef, merge: true)
+        try await batch.commit()
+        return assigned
+    }
+
+    /// Paginated fetch of users in World Ranking order (worldRank ascending).
+    /// Users with `worldRankOptOut == true` are filtered out client-side. Users with
+    /// no worldRank set (legacy/un-backfilled) are not returned by this query.
+    func fetchWorldRanking(limit: Int = 50, startAfter lastRank: Int? = nil) async throws -> [AppUser] {
+        var query: Query = db.collection("users")
+            .order(by: "worldRank", descending: false)
+            .limit(to: limit)
+        if let lastRank {
+            query = query.start(after: [lastRank])
+        }
+        let snap = try await query.getDocuments()
+        let users = snap.documents.compactMap { try? $0.data(as: AppUser.self) }
+        // Hide opted-out users
+        return users.filter { ($0.worldRankOptOut ?? false) == false }
     }
 
     /// Fetches every pending round across every club. Used by the super-admin force-confirm view.
@@ -1025,22 +1150,51 @@ class FirebaseService: ObservableObject {
         // Drop a notification on the defendant
         let msg = "🎯 \(challenge.challengerName) challenged you" +
                  (challenge.message?.isEmpty == false ? ": \"\(challenge.message!)\"" : "!")
-        _ = try? await db.collection("notifications").addDocument(data: [
-            "userId":    challenge.defendantUID,
-            "message":   msg,
-            "isRead":    false,
-            "createdAt": Timestamp(date: Date())
-        ])
+        _ = try? await createNotification(
+            userId: challenge.defendantUID,
+            message: msg,
+            type: .challengeReceived,
+            meta: [
+                "challengeId": ref.documentID,
+                "clubId":      challenge.clubID,
+                "challengerUID": challenge.challengerUID
+            ]
+        )
         return ref.documentID
     }
 
     /// Marks a challenge as accepted or declined.
     func updateChallengeStatus(challengeId: String, status: Challenge.ChallengeStatus) async throws {
+        // Fetch the challenge so we know who the challenger is (for the response notification).
+        let docSnap = try await db.collection("challenges").document(challengeId).getDocument()
+        let existing: Challenge? = try? docSnap.data(as: Challenge.self)
         try await db.collection("challenges").document(challengeId)
             .updateData([
                 "status": status.rawValue,
                 "resolvedAt": Timestamp(date: Date())
             ])
+        // Notify the challenger of the response (accept/decline/etc.)
+        if let challenge = existing, status != .pending {
+            let verb: String
+            switch status {
+            case .accepted:  verb = "accepted"
+            case .declined:  verb = "declined"
+            case .completed: verb = "completed"
+            case .cancelled: verb = "cancelled"
+            case .pending:   verb = "updated"
+            }
+            let msg = "🎯 \(challenge.defendantName) \(verb) your challenge"
+            _ = try? await createNotification(
+                userId: challenge.challengerUID,
+                message: msg,
+                type: .challengeResponded,
+                meta: [
+                    "challengeId": challengeId,
+                    "clubId":      challenge.clubID,
+                    "status":      status.rawValue
+                ]
+            )
+        }
     }
 
     /// Fetches every challenge that involves a user — incoming AND outgoing.
@@ -1076,7 +1230,11 @@ class FirebaseService: ObservableObject {
                            twitter: String? = nil,
                            tiktok: String? = nil,
                            favoriteCourse: String? = nil,
-                           yearsPlaying: Int? = nil) async throws {
+                           yearsPlaying: Int? = nil,
+                           pdgaNumber: String? = nil,
+                           worldRankOptOut: Bool? = nil,
+                           notifyEnabled: Bool? = nil,
+                           notificationPrefs: [String: Bool]? = nil) async throws {
         var data: [String: Any] = [:]
         if let displayName    { data["displayName"]    = displayName }
         if let photoURL       { data["photoURL"]       = photoURL  }
@@ -1087,6 +1245,10 @@ class FirebaseService: ObservableObject {
         if let tiktok         { data["tiktok"]         = tiktok    }
         if let favoriteCourse { data["favoriteCourse"] = favoriteCourse }
         if let yearsPlaying   { data["yearsPlaying"]   = yearsPlaying }
+        if let pdgaNumber     { data["pdgaNumber"]     = pdgaNumber }
+        if let worldRankOptOut { data["worldRankOptOut"] = worldRankOptOut }
+        if let notifyEnabled  { data["notifyEnabled"]  = notifyEnabled }
+        if let notificationPrefs { data["notificationPrefs"] = notificationPrefs }
         guard !data.isEmpty else { return }
 
         // Make sure baseline fields (email, createdAt) exist so older accounts

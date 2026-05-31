@@ -856,7 +856,12 @@ struct EventManageView: View {
         let dateStr = current.startDate.formatted(date: .abbreviated, time: .shortened)
         let msg = "🔔 Reminder: \(current.title) — \(dateStr)" +
                   ((current.location?.isEmpty ?? true) ? "" : " @ \(current.location!)")
-        _ = try? await service.sendNotificationToAllClubMembers(clubId: clubId, message: msg)
+        _ = try? await service.sendNotificationToAllClubMembers(
+            clubId: clubId,
+            message: msg,
+            type: .eventReminder,
+            meta: ["eventId": current.id ?? ""]
+        )
         reminderSent = true
         isReminding = false
     }

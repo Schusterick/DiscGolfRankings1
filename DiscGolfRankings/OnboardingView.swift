@@ -12,7 +12,6 @@ struct OnboardingView: View {
             TabView(selection: $page) {
                 page1.tag(0)
                 page2.tag(1)
-                page3.tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
@@ -20,67 +19,46 @@ struct OnboardingView: View {
         .preferredColorScheme(.dark)
     }
 
-    // MARK: Page 1 — Brand
+    // MARK: Page 1 — For Players
 
     private var page1: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        VStack(spacing: 24) {
+            Spacer().frame(height: 12)
+
             Image(systemName: "figure.disc.sports")
-                .font(.system(size: 96))
+                .font(.system(size: 78))
                 .foregroundStyle(Theme.accent)
                 .shadow(color: Theme.accent.opacity(0.4), radius: 20)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text("DiscGolfRankings")
-                    .font(.system(size: 36, weight: .black, design: .rounded))
+                    .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
-                Text("Own Your Rank")
-                    .font(.title2.bold())
+                Text("100% Free to Join")
+                    .font(.title3.bold())
                     .foregroundStyle(Theme.gold)
-                Text("The official tag-match ranking system\nfor disc golf clubs.")
-                    .font(.body)
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
             }
+
+            // Three benefit rows
+            VStack(spacing: 14) {
+                benefitRow(icon: "list.number",
+                           color: Theme.gold,
+                           title: "Live Rankings",
+                           subtitle: "See your tag, your club's leaderboard, and your world rank instantly.")
+                benefitRow(icon: "person.2.fill",
+                           color: Theme.accent,
+                           title: "Easy to Join Clubs",
+                           subtitle: "Find your local club, request to join, and start playing for tags.")
+                benefitRow(icon: "hand.raised.fill",
+                           color: Theme.success,
+                           title: "We Don't Take a Cut",
+                           subtitle: "0% platform fee. Every dollar you pay your club stays with your club.")
+            }
+            .padding(.horizontal, 20)
 
             Spacer()
 
             Button { withAnimation { page = 1 } } label: {
-                Text("Get Started")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
-            }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 48)
-        }
-    }
-
-    // MARK: Page 2 — How It Works
-
-    private var page2: some View {
-        VStack(spacing: 32) {
-            Spacer()
-            Text("How It Works")
-                .font(.system(size: 30, weight: .black, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
-
-            VStack(spacing: 20) {
-                howItWorksRow(icon: "person.badge.plus", color: Theme.accent,
-                              title: "Join a Club", subtitle: "Find your local disc golf club and become a member.")
-                howItWorksRow(icon: "tag.fill", color: Theme.gold,
-                              title: "Get Your Tag", subtitle: "Every member gets a tag number. Lower is better — #1 is the champion.")
-                howItWorksRow(icon: "flag.checkered.2.crossed", color: Theme.success,
-                              title: "Play for Tags", subtitle: "Beat other members to take their tag. Winners swap numbers after every round.")
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            Button { withAnimation { page = 2 } } label: {
                 Text("Next")
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -93,52 +71,50 @@ struct OnboardingView: View {
         }
     }
 
-    @ViewBuilder
-    private func howItWorksRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
-                .frame(width: 48, height: 48)
-                .background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).foregroundStyle(Theme.textPrimary)
-                Text(subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
-    }
+    // MARK: Page 2 — For Clubs
 
-    // MARK: Page 3 — CTA
+    private var page2: some View {
+        VStack(spacing: 24) {
+            Spacer().frame(height: 12)
 
-    private var page3: some View {
-        VStack(spacing: 32) {
-            Spacer()
-            Image(systemName: "magnifyingglass.circle.fill")
-                .font(.system(size: 80))
+            Image(systemName: "trophy.fill")
+                .font(.system(size: 70))
                 .foregroundStyle(Theme.gold)
+                .shadow(color: Theme.gold.opacity(0.4), radius: 20)
 
-            VStack(spacing: 12) {
-                Text("Find Your Club")
-                    .font(.system(size: 30, weight: .black, design: .rounded))
+            VStack(spacing: 8) {
+                Text("Run Your Club")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
-                Text("Search for an existing club near you, or request to start your own.")
-                    .font(.body)
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                Text("Free for 60 days, then $50/year")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.gold)
             }
-
-            Spacer()
 
             VStack(spacing: 14) {
+                benefitRow(icon: "megaphone.fill",
+                           color: Theme.accent,
+                           title: "Streamlined Communication",
+                           subtitle: "Broadcast to every member, post events, and skip the Discord chaos.")
+                benefitRow(icon: "tag.fill",
+                           color: Theme.gold,
+                           title: "Modern Tag System",
+                           subtitle: "Rankings update automatically after every round. No more spreadsheets.")
+                benefitRow(icon: "link",
+                           color: Theme.success,
+                           title: "Shareable Club Profile",
+                           subtitle: "Post your club's link anywhere. New members can join in seconds.")
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            VStack(spacing: 10) {
                 Button {
                     onboardingIntent  = "browse"
                     hasSeenOnboarding = true
                 } label: {
-                    Text("Browse Clubs")
+                    Text("Find a Club")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -150,7 +126,7 @@ struct OnboardingView: View {
                     onboardingIntent  = "request"
                     hasSeenOnboarding = true
                 } label: {
-                    Text("Request a Club")
+                    Text("Start a Club")
                         .font(.headline)
                         .foregroundStyle(Theme.accent)
                         .frame(maxWidth: .infinity)
@@ -159,7 +135,32 @@ struct OnboardingView: View {
                 }
             }
             .padding(.horizontal, 32)
-            .padding(.bottom, 48)
+            .padding(.bottom, 40)
         }
+    }
+
+    // MARK: Shared row component
+
+    @ViewBuilder
+    private func benefitRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
+                .frame(width: 44, height: 44)
+                .background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.textPrimary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
     }
 }

@@ -62,3 +62,20 @@ fastlane/test_output
 # ─── Stray spreadsheets / unrelated docs ──────────────────────────────────
 Cost_per_Disc_organized.xlsx
 *.xlsx
+
+# ─── Firebase service account keys (NEVER commit) ─────────────────────────
+*firebase-adminsdk*.json
+*service-account*.json
+
+# ─── Node (Cloud Functions deps) ──────────────────────────────────────────
+node_modules/
+
+# ─── Firebase deploy/hosting cache ────────────────────────────────────────
+.firebase/
+
+# ─── Claude Code local tooling config ─────────────────────────────────────
+.claude/
+
+# ─── Local plist backups (never commit) ───────────────────────────────────
+*.bak-schusterick
+GoogleService-Info*.plist.bak*

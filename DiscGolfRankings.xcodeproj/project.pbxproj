@@ -7,9 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA23ED2A2FC92CB600C10F50 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = AA23ED292FC92CB600C10F50 /* FirebaseMessaging */; };
 		AA2803592FC49389003087EE /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = AA2803582FC49389003087EE /* FirebaseStorage */; };
 		AA6832392FB3BAFC0095B25F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B0010060 /* FirebaseAuth */; };
 		AA68323A2FB3BAFC0095B25F /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B0010061 /* FirebaseFirestore */; };
+		AAEB353A2FC7C4D100460B45 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AAEB35392FC7C4D100460B45 /* GoogleSignIn */; };
+		AAEB353C2FC7C4D100460B45 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AAEB353B2FC7C4D100460B45 /* GoogleSignInSwift */; };
+		AAEB353E2FC7C74B00460B45 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AAEB353D2FC7C74B00460B45 /* GoogleService-Info.plist */; };
 		B001000A /* AppEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001000B /* AppEntry.swift */; };
 		B001000C /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001000D /* Models.swift */; };
 		B001000E /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B001000F /* AuthService.swift */; };
@@ -17,7 +21,6 @@
 		B0010012 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010013 /* AuthViews.swift */; };
 		B0010014 /* ClubViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010015 /* ClubViews.swift */; };
 		B0010016 /* ChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010017 /* ChallengeViews.swift */; };
-		B0010018 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B0010019 /* GoogleService-Info.plist */; };
 		B001001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B001001B /* Assets.xcassets */; };
 		B0010090 /* GroupRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010091 /* GroupRoundViews.swift */; };
 		B0010092 /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010093 /* AdminViews.swift */; };
@@ -38,12 +41,15 @@
 		B00100B0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B00100B1 /* PrivacyInfo.xcprivacy */; };
 		B00100B2 /* ClubSubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100B3 /* ClubSubscriptionView.swift */; };
 		B00100B4 /* PhotoUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100B5 /* PhotoUploadView.swift */; };
+		B0FFFF01 /* WorldRankingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FFFF02 /* WorldRankingView.swift */; };
+		B0FFFF03 /* CompleteProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FFFF04 /* CompleteProfileView.swift */; };
+		B0FFFF05 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FFFF06 /* PushNotificationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		AA28035A2FC51C7E003087EE /* DiscGolfRankings.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DiscGolfRankings.entitlements; sourceTree = "<group>"; };
 		AA28035C2FC5299A003087EE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		AA68323B2FB3BB440095B25F /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		AAEB353D2FC7C74B00460B45 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B001000B /* AppEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntry.swift; sourceTree = "<group>"; };
 		B001000D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B001000F /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -51,7 +57,6 @@
 		B0010013 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
 		B0010015 /* ClubViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubViews.swift; sourceTree = "<group>"; };
 		B0010017 /* ChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeViews.swift; sourceTree = "<group>"; };
-		B0010019 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B001001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0010020 /* DiscGolfRankings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiscGolfRankings.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B0010091 /* GroupRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRoundViews.swift; sourceTree = "<group>"; };
@@ -73,6 +78,9 @@
 		B00100B1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B00100B3 /* ClubSubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubSubscriptionView.swift; sourceTree = "<group>"; };
 		B00100B5 /* PhotoUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoUploadView.swift; sourceTree = "<group>"; };
+		B0FFFF02 /* WorldRankingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldRankingView.swift; sourceTree = "<group>"; };
+		B0FFFF04 /* CompleteProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteProfileView.swift; sourceTree = "<group>"; };
+		B0FFFF06 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,7 +88,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA23ED2A2FC92CB600C10F50 /* FirebaseMessaging in Frameworks */,
+				AAEB353C2FC7C4D100460B45 /* GoogleSignInSwift in Frameworks */,
 				AA68323A2FB3BAFC0095B25F /* FirebaseFirestore in Frameworks */,
+				AAEB353A2FC7C4D100460B45 /* GoogleSignIn in Frameworks */,
 				AA6832392FB3BAFC0095B25F /* FirebaseAuth in Frameworks */,
 				AA2803592FC49389003087EE /* FirebaseStorage in Frameworks */,
 			);
@@ -110,7 +121,6 @@
 			children = (
 				AA28035C2FC5299A003087EE /* Info.plist */,
 				AA28035A2FC51C7E003087EE /* DiscGolfRankings.entitlements */,
-				AA68323B2FB3BB440095B25F /* GoogleService-Info.plist */,
 				B001000B /* AppEntry.swift */,
 				B001000D /* Models.swift */,
 				B001000F /* AuthService.swift */,
@@ -125,6 +135,7 @@
 				B0010099 /* OnboardingView.swift */,
 				B001009B /* AdminDashboardView.swift */,
 				B001009D /* Config.swift */,
+				AAEB353D2FC7C74B00460B45 /* GoogleService-Info.plist */,
 				B001009F /* CloudFunctions.swift */,
 				B00100A1 /* StripeService.swift */,
 				B00100A3 /* PaymentViews.swift */,
@@ -133,10 +144,12 @@
 				B00100A9 /* PublicProfileView.swift */,
 				B00100AB /* RankingEngine.swift */,
 				B00100AD /* EventViews.swift */,
+				B0FFFF02 /* WorldRankingView.swift */,
+				B0FFFF04 /* CompleteProfileView.swift */,
+				B0FFFF06 /* PushNotificationService.swift */,
 				B00100AF /* ClubPublicProfileView.swift */,
 				B00100B3 /* ClubSubscriptionView.swift */,
 				B00100B5 /* PhotoUploadView.swift */,
-				B0010019 /* GoogleService-Info.plist */,
 				B00100B1 /* PrivacyInfo.xcprivacy */,
 				B001001B /* Assets.xcassets */,
 			);
@@ -171,6 +184,9 @@
 				B0010060 /* FirebaseAuth */,
 				B0010061 /* FirebaseFirestore */,
 				AA2803582FC49389003087EE /* FirebaseStorage */,
+				AAEB35392FC7C4D100460B45 /* GoogleSignIn */,
+				AAEB353B2FC7C4D100460B45 /* GoogleSignInSwift */,
+				AA23ED292FC92CB600C10F50 /* FirebaseMessaging */,
 			);
 			productName = DiscGolfRankings;
 			productReference = B0010020 /* DiscGolfRankings.app */;
@@ -202,6 +218,7 @@
 			mainGroup = B0010030;
 			packageReferences = (
 				B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				AA38B6282FC7BA97003E3060 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = B0010032 /* Products */;
 			projectDirPath = "";
@@ -217,8 +234,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B0010018 /* GoogleService-Info.plist in Resources */,
 				B00100B0 /* PrivacyInfo.xcprivacy in Resources */,
+				AAEB353E2FC7C74B00460B45 /* GoogleService-Info.plist in Resources */,
 				B001001A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -252,6 +269,9 @@
 				B00100A8 /* PublicProfileView.swift in Sources */,
 				B00100AA /* RankingEngine.swift in Sources */,
 				B00100AC /* EventViews.swift in Sources */,
+				B0FFFF01 /* WorldRankingView.swift in Sources */,
+				B0FFFF03 /* CompleteProfileView.swift in Sources */,
+				B0FFFF05 /* PushNotificationService.swift in Sources */,
 				B00100AE /* ClubPublicProfileView.swift in Sources */,
 				B00100B2 /* ClubSubscriptionView.swift in Sources */,
 				B00100B4 /* PhotoUploadView.swift in Sources */,
@@ -268,7 +288,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DiscGolfRankings/DiscGolfRankings.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = TC7RHXK5LK;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DiscGolfRankings/Info.plist;
@@ -298,7 +318,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DiscGolfRankings/DiscGolfRankings.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = TC7RHXK5LK;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DiscGolfRankings/Info.plist;
@@ -463,21 +483,44 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		AA38B6282FC7BA97003E3060 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 		B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 10.0.0;
+				minimumVersion = 11.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AA23ED292FC92CB600C10F50 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
 		AA2803582FC49389003087EE /* FirebaseStorage */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B0010080 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		AAEB35392FC7C4D100460B45 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA38B6282FC7BA97003E3060 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		AAEB353B2FC7C4D100460B45 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA38B6282FC7BA97003E3060 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 		B0010060 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

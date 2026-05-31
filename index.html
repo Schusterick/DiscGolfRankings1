@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiscGolfRankings — Free Rankings & Club Management App</title>
+  <meta name="description" content="The free disc golf app for players and club admins. World rankings, digital bag tags, member messaging, and more. Available on iOS." />
+  <meta name="theme-color" content="#1A1A2E" />
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="apple-touch-icon" href="assets/logo.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="DiscGolfRankings — Free Rankings & Club Management" />
+  <meta property="og:description" content="The free disc golf app with world rankings, digital bag tags, and powerful club admin tools." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://discgolfrankings.com" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <style>
+    /* Page-specific extras */
+    .hero-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .free-callout {
+      background: linear-gradient(135deg, rgba(76,175,80,0.12) 0%, rgba(76,175,80,0.04) 100%);
+      border: 1.5px solid rgba(76,175,80,0.25);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .free-callout-icon { font-size: 1.75rem; flex-shrink: 0; }
+    .free-callout-text h4 { font-size: 1rem; margin-bottom: 2px; }
+    .free-callout-text p { font-size: 0.875rem; margin: 0; }
+
+    /* Zigzag section separator */
+    .section-bg-alt { background: var(--card); }
+
+    /* Stat bar */
+    .stat-bar {
+      background: var(--card-alt);
+      border-top: 1px solid var(--divider);
+      border-bottom: 1px solid var(--divider);
+      padding: 28px 0;
+    }
+    .stat-bar-inner {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-bar-item {
+      text-align: center;
+    }
+    .stat-bar-number {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      display: block;
+    }
+    .stat-bar-label {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Feature split */
+    .feature-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .feature-split-divider {
+      width: 1px;
+      background: var(--divider);
+      align-self: stretch;
+    }
+    @media (max-width: 768px) {
+      .feature-split { grid-template-columns: 1fr; }
+      .feature-split-divider { width: 100%; height: 1px; }
+      .feature-split { gap: 32px; }
+    }
+
+    /* CTA band */
+    .cta-band {
+      background: linear-gradient(135deg, rgba(233,69,96,0.08) 0%, rgba(245,166,35,0.04) 100%);
+      border: 1px solid rgba(233,69,96,0.15);
+      border-radius: 20px;
+      padding: 48px;
+      text-align: center;
+    }
+    @media (max-width: 640px) {
+      .cta-band { padding: 32px 24px; }
+    }
+
+    /* Coming soon banner for Android */
+    .android-soon {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Announcement Bar -->
+  <div class="announcement-bar" role="banner">
+    🎉 &nbsp;Now live on the App Store — free to download, free forever for players
+  </div>
+
+  <!-- ===================== NAVBAR ===================== -->
+  <header>
+    <nav class="navbar" aria-label="Main navigation">
+      <div class="container">
+        <div class="navbar-inner">
+          <a href="/" class="navbar-logo" aria-label="DiscGolfRankings home">
+            <img src="assets/logo.png" alt="" aria-hidden="true" width="36" height="36" style="border-radius:8px;display:block;" />
+            <span>DiscGolfRankings</span>
+          </a>
+
+          <ul class="navbar-nav" role="list">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#for-clubs">For Clubs</a></li>
+            <li><a href="#download">Download</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+          </ul>
+
+          <div class="navbar-cta">
+            <a href="#download" class="btn btn-primary btn-sm">Download Free</a>
+          </div>
+
+          <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        <div class="mobile-menu" id="mobile-menu" role="navigation" aria-label="Mobile navigation">
+          <a href="#features">Features</a>
+          <a href="#for-clubs">For Clubs</a>
+          <a href="#download">Download</a>
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="#download" class="btn btn-primary" style="margin-top:8px; width:100%; justify-content:center;">Download Free</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+
+      <div class="container">
+        <div class="hero-content">
+          <!-- Left: Copy -->
+          <div>
+            <div class="hero-badge-row animate-fade-in">
+              <span class="badge badge-success">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="#4CAF50"/></svg>
+                100% Free
+              </span>
+              <span class="badge badge-accent">iOS Available Now</span>
+              <span class="badge badge-gold">Android Coming Soon</span>
+            </div>
+
+            <h1 id="hero-heading" class="animate-fade-in animate-delay-1">
+              Disc golf,<br/>
+              <span class="gradient-text">ranked & managed.</span>
+            </h1>
+
+            <p class="hero-subtitle animate-fade-in animate-delay-2">
+              The free app that gives players world rankings and gives club admins
+              a smarter way to run everything — bag tags, messaging, sign-ups, and more.
+              No fees. No limits.
+            </p>
+
+            <div class="hero-cta-group animate-fade-in animate-delay-3">
+              <a href="https://apps.apple.com/app/discgolfrankings/id6745485606"
+                 class="btn btn-primary btn-lg"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 aria-label="Download on the App Store">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                Download on iOS
+              </a>
+              <a href="#for-clubs" class="btn btn-outline btn-lg">
+                Club Admin Features
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+
+            <div class="hero-stats animate-fade-in animate-delay-3">
+              <div class="hero-stat-item">
+                <span class="hero-stat-number text-accent">Free</span>
+                <span class="hero-stat-label">Always, for players</span>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-stat-number text-gold">World</span>
+                <span class="hero-stat-label">Rankings included</span>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-stat-number" style="color:var(--success)">0</span>
+                <span class="hero-stat-label">Physical bag tags needed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Phone mockup -->
+          <div class="hero-visual animate-fade-in animate-delay-2">
+            <div style="position:relative;">
+              <div class="phone-mockup animate-float" aria-hidden="true">
+                <div class="phone-notch"></div>
+                <div class="phone-screen">
+                  <div class="phone-header">
+                    <span class="phone-header-title">World Rankings</span>
+                    <span style="font-size:0.6875rem;color:var(--gold);font-weight:700;">🏆 Live</span>
+                  </div>
+
+                  <div class="phone-rank-card">
+                    <div class="phone-avatar">🥏</div>
+                    <div class="phone-rank-info">
+                      <div class="phone-rank-name">Your Ranking</div>
+                      <div class="phone-rank-sub">Global • All Skill Levels</div>
+                    </div>
+                    <div class="phone-rank-number">#1</div>
+                  </div>
+
+                  <div class="phone-list-item">
+                    <span class="phone-list-num">1</span>
+                    <div class="phone-list-avatar" style="background:linear-gradient(135deg,#E94560,#c73652);"></div>
+                    <span class="phone-list-name">Player One</span>
+                    <span class="phone-list-score">1,024 pts</span>
+                  </div>
+                  <div class="phone-list-item">
+                    <span class="phone-list-num">2</span>
+                    <div class="phone-list-avatar" style="background:linear-gradient(135deg,#F5A623,#e0961f);"></div>
+                    <span class="phone-list-name">Player Two</span>
+                    <span class="phone-list-score">987 pts</span>
+                  </div>
+                  <div class="phone-list-item">
+                    <span class="phone-list-num">3</span>
+                    <div class="phone-list-avatar" style="background:linear-gradient(135deg,#4CAF50,#388E3C);"></div>
+                    <span class="phone-list-name">Player Three</span>
+                    <span class="phone-list-score">954 pts</span>
+                  </div>
+                  <div class="phone-list-item" style="opacity:0.6;">
+                    <span class="phone-list-num">4</span>
+                    <div class="phone-list-avatar"></div>
+                    <span class="phone-list-name">Player Four</span>
+                    <span class="phone-list-score">901 pts</span>
+                  </div>
+
+                  <div class="phone-tag-section">
+                    <span class="phone-tag-icon">🏷️</span>
+                    <span class="phone-tag-label">Bag Tag #7 — Dalton DGC</span>
+                    <span class="phone-tag-num">7</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Floating badges -->
+              <div class="phone-float-badge left animate-glow" aria-hidden="true">
+                <span style="color:var(--success);">✓</span>
+                <span>Free forever</span>
+              </div>
+              <div class="phone-float-badge right" aria-hidden="true">
+                <span style="color:var(--gold);">🏷️</span>
+                <span>Digital bag tags</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== STATS BAR ===================== -->
+    <div class="stat-bar" role="region" aria-label="App highlights">
+      <div class="container">
+        <div class="stat-bar-inner">
+          <div class="stat-bar-item reveal">
+            <span class="stat-bar-number text-accent">$0</span>
+            <span class="stat-bar-label">Cost to download</span>
+          </div>
+          <div class="stat-bar-item reveal">
+            <span class="stat-bar-number text-gold">World</span>
+            <span class="stat-bar-label">Rankings system</span>
+          </div>
+          <div class="stat-bar-item reveal">
+            <span class="stat-bar-number" style="color:var(--success);">∞</span>
+            <span class="stat-bar-label">Clubs you can join</span>
+          </div>
+          <div class="stat-bar-item reveal">
+            <span class="stat-bar-number text-accent">1-tap</span>
+            <span class="stat-bar-label">Message all members</span>
+          </div>
+          <div class="stat-bar-item reveal">
+            <span class="stat-bar-number text-gold">Digital</span>
+            <span class="stat-bar-label">Bag tags — no plastic</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PLAYER FEATURES ===================== -->
+    <section id="features" class="section" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="section-header reveal">
+          <div class="eyebrow">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            For Players
+          </div>
+          <h2 id="features-heading">Everything you need.<br/>All for free.</h2>
+          <p>No subscription. No paywall. Download once and get full access to your rankings, clubs, and bag tags.</p>
+        </div>
+
+        <div class="grid-3 reveal">
+          <!-- Feature 1 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-accent" aria-hidden="true">🌍</div>
+            <h3>Free World Rankings</h3>
+            <p>See where you stand globally. A real ranking system that reflects your performance across clubs and events — completely free.</p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-gold" aria-hidden="true">🏷️</div>
+            <h3>Digital Bag Tags</h3>
+            <p>No more plastic tags to track down or lose. Your bag tag number lives in the app, always up to date, always with you.</p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-success" aria-hidden="true">🎯</div>
+            <h3>Multiple Clubs, One App</h3>
+            <p>Belong to five clubs? Ten? Streamline everything into a single place. Switch between clubs instantly without juggling multiple apps or group chats.</p>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-accent" aria-hidden="true">📊</div>
+            <h3>Club Leaderboards</h3>
+            <p>Track standings within each club you belong to. Know exactly where you rank among your local disc golf community.</p>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-gold" aria-hidden="true">📅</div>
+            <h3>Events & Challenges</h3>
+            <p>Stay in the loop on upcoming events and club challenges. RSVP, compete, and track results all in one place.</p>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="card card-hover feature-card">
+            <div class="feature-icon feature-icon-success" aria-hidden="true">🔒</div>
+            <h3>Simple Sign-Up</h3>
+            <p>Join a club instantly using a shared link. No paper forms, no waiting for an email reply. Just tap and you're in.</p>
+          </div>
+        </div>
+
+        <div class="free-callout reveal" style="margin-top: 48px;">
+          <div class="free-callout-icon" aria-hidden="true">✅</div>
+          <div class="free-callout-text">
+            <h4>No cost. No catch. No subscription.</h4>
+            <p>DiscGolfRankings is free to download and free to use for every player — rankings, bag tags, and club membership included.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DIVIDER ===================== -->
+    <div class="divider-line" aria-hidden="true"></div>
+
+    <!-- ===================== CLUB ADMIN FEATURES ===================== -->
+    <section id="for-clubs" class="section section-bg-alt" aria-labelledby="clubs-heading">
+      <div class="container">
+        <div class="section-header reveal">
+          <div class="eyebrow" style="color:var(--gold);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            For Club Admins
+          </div>
+          <h2 id="clubs-heading">The best tool for<br/>running your club.</h2>
+          <p>Stop herding members through Facebook groups and text threads. DiscGolfRankings gives you a real command center for your club — right from your phone.</p>
+        </div>
+
+        <div class="admin-grid reveal">
+          <!-- Left: Feature list -->
+          <div class="admin-feature-list">
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Message All Members — One Button</h4>
+                <p>Reach your entire club instantly. Announcements, weather cancellations, event reminders — sent to everyone with a single tap.</p>
+              </div>
+            </div>
+
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Shareable Sign-Up Links</h4>
+                <p>Post a link anywhere — Facebook, your website, a flyer — and new members join in seconds. No paperwork, no manual roster updates.</p>
+              </div>
+            </div>
+
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Digital Bag Tags — No More Plastic</h4>
+                <p>Assign, transfer, and manage bag tag numbers entirely in the app. Members always have their tag. You never have to reprint one again.</p>
+              </div>
+            </div>
+
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Full Member Roster View</h4>
+                <p>See who's in your club, their bag tag numbers, rankings, and activity — all in a clean dashboard built for admin work.</p>
+              </div>
+            </div>
+
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Club Leaderboard Management</h4>
+                <p>Rankings update automatically. No spreadsheets, no manual entry. Your club standings are always live and accurate.</p>
+              </div>
+            </div>
+
+            <div class="admin-feature-item">
+              <div class="admin-feature-check" aria-hidden="true">
+                <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+              </div>
+              <div class="admin-feature-text">
+                <h4>Events & Challenges</h4>
+                <p>Create events, manage entries, and track results. Keep your members engaged and competing all season long.</p>
+              </div>
+            </div>
+
+            <div style="margin-top: 8px;">
+              <span class="badge badge-gold" style="font-size:0.75rem;">
+                🖥️ Web Admin Portal — Coming Soon
+              </span>
+              <p style="font-size:0.875rem; margin-top:8px;">
+                A full desktop experience for bulk roster management, mass messaging, and reporting is on the roadmap. For now, the mobile app handles everything club admins need.
+              </p>
+            </div>
+          </div>
+
+          <!-- Right: Admin mockup -->
+          <div class="admin-mockup" aria-hidden="true">
+            <div class="admin-mockup-header">
+              <div class="admin-dot admin-dot-r"></div>
+              <div class="admin-dot admin-dot-y"></div>
+              <div class="admin-dot admin-dot-g"></div>
+              <span class="admin-mockup-title">Club Admin Dashboard</span>
+            </div>
+            <div class="admin-mockup-body">
+              <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary);">Dalton Disc Golf Club</div>
+
+              <div class="admin-stat-row">
+                <div class="admin-stat-mini">
+                  <span class="val text-accent">47</span>
+                  <span class="lbl">Members</span>
+                </div>
+                <div class="admin-stat-mini">
+                  <span class="val text-gold">32</span>
+                  <span class="lbl">Bag Tags</span>
+                </div>
+                <div class="admin-stat-mini">
+                  <span class="val" style="color:var(--success);">3</span>
+                  <span class="lbl">Events</span>
+                </div>
+              </div>
+
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);letter-spacing:0.05em;text-transform:uppercase;margin-top:4px;">Members</div>
+
+              <div class="admin-member-list">
+                <div class="admin-member-row">
+                  <div class="admin-member-avatar" style="background:linear-gradient(135deg,#E94560,#c73652);color:#fff;">W</div>
+                  <span class="admin-member-name">Will S.</span>
+                  <span class="admin-member-tag">#1</span>
+                </div>
+                <div class="admin-member-row">
+                  <div class="admin-member-avatar" style="background:linear-gradient(135deg,#F5A623,#e0961f);color:#fff;">J</div>
+                  <span class="admin-member-name">Jake M.</span>
+                  <span class="admin-member-tag">#2</span>
+                </div>
+                <div class="admin-member-row">
+                  <div class="admin-member-avatar" style="background:linear-gradient(135deg,#4CAF50,#388E3C);color:#fff;">A</div>
+                  <span class="admin-member-name">Alex R.</span>
+                  <span class="admin-member-tag">#3</span>
+                </div>
+                <div class="admin-member-row" style="opacity:0.6;">
+                  <div class="admin-member-avatar">C</div>
+                  <span class="admin-member-name">Chris P.</span>
+                  <span class="admin-member-tag">#4</span>
+                </div>
+              </div>
+
+              <div class="admin-msg-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Message All 47 Members
+              </div>
+
+              <div style="display:flex;gap:8px;">
+                <button style="flex:1;padding:8px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:0.75rem;font-weight:700;color:var(--gold);cursor:default;">
+                  Share Join Link
+                </button>
+                <button style="flex:1;padding:8px;background:rgba(233,69,96,0.08);border:1px solid rgba(233,69,96,0.2);border-radius:8px;font-size:0.75rem;font-weight:700;color:var(--accent);cursor:default;">
+                  Manage Tags
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DOWNLOAD ===================== -->
+    <section id="download" class="section download-section" aria-labelledby="download-heading">
+      <div class="container">
+        <div class="cta-band reveal">
+          <div class="section-header" style="margin-bottom: 32px;">
+            <div class="eyebrow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Get Started Free
+            </div>
+            <h2 id="download-heading">Download DiscGolfRankings.<br/><span class="gradient-text">It's free. Always.</span></h2>
+            <p style="max-width:520px;">Join disc golfers who are already tracking their rankings, managing their clubs, and ditching physical bag tags for good.</p>
+          </div>
+
+          <div class="store-buttons" style="justify-content: center;">
+            <!-- iOS -->
+            <a href="https://apps.apple.com/app/discgolfrankings/id6745485606"
+               class="store-btn"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Download DiscGolfRankings on the Apple App Store">
+              <div class="store-btn-icon" aria-hidden="true">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+              </div>
+              <div class="store-btn-text">
+                <span class="store-btn-sub">Download on the</span>
+                <span class="store-btn-name">App Store</span>
+              </div>
+            </a>
+
+            <!-- Android coming soon -->
+            <div class="store-btn store-btn-coming"
+                 aria-label="Android coming soon"
+                 title="Android version coming soon">
+              <div class="store-btn-icon" aria-hidden="true">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="#A0A0B0">
+                  <path d="M17.523 15.341L18.9 12.915c.13-.23.05-.522-.178-.655l-1.354-.782c-.228-.132-.52-.053-.652.178L15.33 13.89a7.05 7.05 0 0 1-3.327.84 7.05 7.05 0 0 1-3.327-.84L7.284 11.656c-.132-.231-.424-.31-.652-.178l-1.354.782c-.228.133-.308.425-.178.655l1.377 2.426A8.96 8.96 0 0 0 12 17.75a8.96 8.96 0 0 0 5.523-2.409zM8.5 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm7 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                  <path d="M16.5 2.5l1.5 2.6M7.5 2.5L6 5.1"/>
+                </svg>
+              </div>
+              <div class="store-btn-text">
+                <span class="store-btn-sub">Coming Soon to</span>
+                <span class="store-btn-name" style="color:var(--text-secondary);">Google Play</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="android-soon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Android version is in development — sign up to get notified when it launches
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand -->
+        <div>
+          <div class="navbar-logo" style="margin-bottom:12px;">
+            <img src="assets/logo.png" alt="" aria-hidden="true" width="36" height="36" style="border-radius:8px;display:block;" />
+            <span>DiscGolfRankings</span>
+          </div>
+          <p class="footer-brand-tagline">Free disc golf rankings and club management for players and admins everywhere.</p>
+        </div>
+
+        <!-- App -->
+        <div>
+          <div class="footer-col-title">App</div>
+          <ul class="footer-links" role="list">
+            <li><a href="#features">Player Features</a></li>
+            <li><a href="#for-clubs">Club Admin Tools</a></li>
+            <li><a href="#download">Download iOS App</a></li>
+            <li><a href="#download">Android — Coming Soon</a></li>
+          </ul>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <div class="footer-col-title">Company</div>
+          <ul class="footer-links" role="list">
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="mailto:support@discgolfrankings.com">Contact Support</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copyright">© <span id="year"></span> DiscGolfRankings. All rights reserved.</p>
+        <div class="footer-legal-links">
+          <a href="privacy.html">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
