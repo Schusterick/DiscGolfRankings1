@@ -66,13 +66,14 @@ function welcomeHtml(firstName) {
                 You're in. Here's everything you need to start owning your rank.
               </p>
 
-              <h2 style="margin:24px 0 8px;font-size:18px;color:#E94560;">What is DiscGolfRankings?</h2>
+              <h2 style="margin:24px 0 8px;font-size:18px;color:#E94560;">It's the digital bag tag</h2>
               <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">
-                It's the first iOS app built specifically for disc-golf
-                <strong>bag-tag clubs</strong>. Members get a tag number, swap
-                tags after every round, host leagues + tournaments, and watch
-                their rank live on the leaderboard — no spreadsheets, no
-                Discord chaos.
+                A physical bag tag is just a number — you can't see the
+                standings, who holds #1, or how your tag is moving. We turn it
+                into a <strong>live ranking system</strong>. Get your tag, swap
+                it after every round, and watch your club leaderboard and
+                <strong>World Ranking</strong> update in real time. No
+                spreadsheets, no Discord chaos.
               </p>
 
               <h2 style="margin:24px 0 8px;font-size:18px;color:#E94560;">Find your local club</h2>
@@ -125,8 +126,9 @@ function welcomeText(firstName) {
   return [
     `Welcome, ${firstName}!`,
     ``,
-    `DiscGolfRankings is the first iOS app built for disc-golf bag-tag clubs.`,
-    `Get a tag, play rounds, swap tags, watch your rank.`,
+    `DiscGolfRankings is the digital bag tag. A physical tag is just a number —`,
+    `here it's a live ranking system. Get a tag, swap it after every round, and`,
+    `watch your club leaderboard and World Ranking update in real time.`,
     ``,
     `FIND YOUR CLUB`,
     `Open the app → Home tab → search clubs by name, city, or state.`,
