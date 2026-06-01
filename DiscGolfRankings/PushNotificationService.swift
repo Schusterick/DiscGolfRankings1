@@ -68,15 +68,26 @@ final class PushNotificationService: NSObject {
     }
 
     /// Called from the app delegate when APNs hands us the device token.
+    ///
+    /// We set the APNs environment EXPLICITLY rather than letting Firebase
+    /// auto-detect it. With `FirebaseAppDelegateProxyEnabled = NO`, the bare
+    /// `Messaging.apnsToken = data` setter uses `.unknown` and auto-detects
+    /// sandbox vs production — which is unreliable for distribution
+    /// (TestFlight/App Store) builds and was causing APNs to reject sends with
+    /// `InvalidProviderToken` even though the auth key was valid. DEBUG builds
+    /// sign with a development profile → sandbox APNs; Release builds
+    /// (TestFlight/App Store) → production APNs.
     func setAPNSDeviceToken(_ data: Data) {
+        #if canImport(FirebaseMessaging)
+        #if DEBUG
+        let env: MessagingAPNSTokenType = .sandbox
+        #else
+        let env: MessagingAPNSTokenType = .prod
+        #endif
+        Messaging.messaging().setAPNSToken(data, type: env)
         #if DEBUG
         let hex = data.map { String(format: "%02x", $0) }.joined()
-        print("📮 [APNsDiag] APNs device token received (\(data.count) bytes): \(hex.prefix(16))…")
-        #endif
-        #if canImport(FirebaseMessaging)
-        Messaging.messaging().apnsToken = data
-        #if DEBUG
-        print("📮 [APNsDiag] Set Messaging.apnsToken — Firebase will now link FCM↔APNs")
+        print("📮 [APNsDiag] Set APNs token (\(data.count) bytes, env=\(env == .prod ? "prod" : "sandbox")): \(hex.prefix(16))…")
         #endif
         #endif
     }
