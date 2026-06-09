@@ -13,7 +13,8 @@ const { onSchedule }        = require("firebase-functions/v2/scheduler");
 const { logger }            = require("firebase-functions");
 const admin                 = require("firebase-admin");
 
-const { sendWelcomeEmail, RESEND_API_KEY } = require("./email");
+const { sendWelcomeEmail, sendClubDuesEmail, RESEND_API_KEY } = require("./email");
+const { buildClubDuesCheckoutUrl, STRIPE_SECRET_KEY } = require("./stripe");
 
 // MARK: Super-admin email list
 // Mirror of AuthService.superAdminEmails in iOS. Keep in sync until we move
@@ -123,7 +124,8 @@ exports.onClubApplicationCreated = onDocumentCreated(
 exports.dailySubscriptionCheck = onSchedule(
   {
     schedule: "0 9 * * *",
-    timeZone: "America/New_York"
+    timeZone: "America/New_York",
+    secrets:  [RESEND_API_KEY, STRIPE_SECRET_KEY]
   },
   async () => {
     const WARN_DAYS = [14, 7, 1];
@@ -150,10 +152,19 @@ exports.dailySubscriptionCheck = onSchedule(
       if (c.adminUID) adminUIDs.add(c.adminUID);
       (c.adminUserIds || []).forEach(uid => adminUIDs.add(uid));
 
-      const status = c.subscriptionStatus === "trial" ? "Free trial" : "Subscription";
+      const status = c.subscriptionStatus === "trial" ? "Free trial" : "Club dues";
       const noun   = daysLeft === 1 ? "day" : "days";
 
+      // One Checkout URL per club, reused for all of its admins.
+      let checkoutUrl = null;
+      try {
+        checkoutUrl = await buildClubDuesCheckoutUrl(doc.id, c.name);
+      } catch (err) {
+        logger.warn("could not build dues checkout url", { clubId: doc.id, error: err.message });
+      }
+
       for (const uid of adminUIDs) {
+        // In-app notification (fires the push fan-out).
         await admin.firestore().collection("notifications").add({
           userId:    uid,
           message:   `⏰ ${status} for "${c.name}" ends in ${daysLeft} ${noun}.`,
@@ -163,6 +174,24 @@ exports.dailySubscriptionCheck = onSchedule(
           meta:      { clubId: doc.id, daysLeft: String(daysLeft) }
         });
         sent++;
+
+        // Email the admin a pay link (best-effort; never blocks the sweep).
+        if (checkoutUrl) {
+          try {
+            const user = await admin.auth().getUser(uid);
+            if (user.email) {
+              await sendClubDuesEmail({
+                to:          user.email,
+                clubName:    c.name,
+                daysLeft,
+                statusLabel: status,
+                checkoutUrl,
+              });
+            }
+          } catch (err) {
+            logger.warn("dues email failed", { uid, clubId: doc.id, error: err.message });
+          }
+        }
       }
     }
     logger.info("dailySubscriptionCheck complete", { sent });

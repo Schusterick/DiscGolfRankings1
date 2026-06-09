@@ -1,27 +1,20 @@
 import SwiftUI
 
 // MARK: - ClubSubscriptionView
-// Admin-facing screen showing the club's hybrid-pricing subscription status.
-// • Trial: shows days remaining + a friendly explainer
-// • Active: shows renewal date + cancel option
-// • Expiring soon: prominent renew CTA
-// • Expired/cancelled: red banner + renew CTA
-//
-// PRODUCTION TODO: replace `simulatePayment()` with a real Stripe Checkout flow
-// (a Cloud Function that creates a Checkout session, then a webhook that calls
-// `FirebaseService.activateClubSubscription` after `checkout.session.completed`).
+// Admin-facing screen showing the club's "Club Dues" status. READ-ONLY — dues
+// are paid on the web via Stripe Checkout (createClubDuesCheckout) and the club
+// doc is flipped to active by the stripeWebhook Cloud Function. There is NO
+// in-app purchase here (keeps us clear of Apple's IAP rules). Admins get a
+// secure pay link by email (dailySubscriptionCheck) and at discgolfrankings.com.
+// • Trial: days remaining  • Active: paid + expiry  • Expiring/Expired: status only
 
 struct ClubSubscriptionView: View {
     let club: Club
 
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) private var dismiss
-    private let service = FirebaseService.shared
 
-    @State private var current:        Club
-    @State private var isProcessing    = false
-    @State private var showCancelConfirm = false
-    @State private var errorMsg:       String?
+    @State private var current: Club
 
     init(club: Club) {
         self.club = club
@@ -36,34 +29,19 @@ struct ClubSubscriptionView: View {
                     VStack(spacing: 22) {
                         statusBanner
                         pricingCard
-                        actions
+                        manageOnWeb
                         valueProps
-                        if let errorMsg {
-                            Text(errorMsg).font(.caption).foregroundStyle(.red)
-                        }
                     }
                     .padding()
                 }
             }
-            .navigationTitle("Subscription")
+            .navigationTitle("Club Dues")
             .navigationBarTitleDisplayMode(.inline)
             .darkNavBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }.foregroundStyle(Theme.accent)
                 }
-            }
-            .confirmationDialog(
-                "Cancel subscription?",
-                isPresented: $showCancelConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Cancel subscription", role: .destructive) {
-                    Task { await cancel() }
-                }
-                Button("Keep subscription", role: .cancel) { }
-            } message: {
-                Text("Members can still see existing data, but you'll be blocked from creating new events or messaging members until you renew.")
             }
         }
         .preferredColorScheme(.dark)
@@ -112,10 +90,10 @@ struct ClubSubscriptionView: View {
     private func bannerTitle(_ s: Club.SubscriptionState) -> String {
         switch s {
         case .trial:        return "Free Trial Active"
-        case .active:       return "Subscription Active"
-        case .expiringSoon: return "Renewal Due Soon"
-        case .expired:      return "Subscription Expired"
-        case .cancelled:    return "Subscription Cancelled"
+        case .active:       return "Club Dues Paid"
+        case .expiringSoon: return "Dues Due Soon"
+        case .expired:      return "Club Dues Expired"
+        case .cancelled:    return "Club Dues Lapsed"
         }
     }
 
@@ -142,60 +120,28 @@ struct ClubSubscriptionView: View {
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    // MARK: Action buttons
+    // MARK: Manage-on-web notice
+    // Club dues are paid on the web (Stripe Checkout), never via an in-app
+    // purchase — this keeps us clear of Apple's IAP rules. The club doc's
+    // status is updated by the Stripe webhook after payment.
 
-    @ViewBuilder
-    private var actions: some View {
-        let state = current.subscriptionState
+    private var manageOnWeb: some View {
         VStack(spacing: 10) {
-            switch state {
-            case .trial:
-                Button { Task { await simulatePayment() } } label: {
-                    payLabel(text: "Upgrade Now — Keep My Club")
-                }
-                .disabled(isProcessing)
-                Text("Pay anytime during your trial — your renewal still kicks in when the trial ends, so you don't lose any free time.")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-
-            case .active:
-                Button(role: .destructive) { showCancelConfirm = true } label: {
-                    Text("Cancel Subscription")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.red.opacity(0.85))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                }
-
-            case .expiringSoon:
-                Button { Task { await simulatePayment() } } label: {
-                    payLabel(text: "Renew Now — Avoid Service Loss")
-                }
-                .disabled(isProcessing)
-
-            case .expired, .cancelled:
-                Button { Task { await simulatePayment() } } label: {
-                    payLabel(text: "Reactivate Subscription")
-                }
-                .disabled(isProcessing)
+            HStack(spacing: 8) {
+                Image(systemName: "globe").foregroundStyle(Theme.accent)
+                Text("Dues are managed on the web")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.textPrimary)
             }
-        }
-    }
-
-    private func payLabel(text: String) -> some View {
-        Group {
-            if isProcessing {
-                ProgressView().tint(.white)
-            } else {
-                Label(text, systemImage: "creditcard.fill")
-                    .font(.headline).foregroundStyle(.white)
-            }
+            Text("We'll email the club admin a secure payment link before your free trial ends — and again if dues come due. You can also pay anytime at discgolfrankings.com. Your paid year is added on top of any trial time remaining, so you never lose free days.")
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
+        .padding(16)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent.opacity(0.25), lineWidth: 1))
     }
 
     // MARK: Value props
@@ -222,41 +168,6 @@ struct ClubSubscriptionView: View {
         }
     }
 
-    // MARK: Actions
-
-    /// Placeholder: in production this should open Stripe Checkout (NOT Connect).
-    /// The Stripe Checkout session is created server-side via a Cloud Function;
-    /// after `checkout.session.completed` webhook, the backend calls
-    /// `FirebaseService.activateClubSubscription(clubId:)`. For now we simulate.
-    private func simulatePayment() async {
-        guard let clubId = current.id else { return }
-        isProcessing = true; errorMsg = nil
-        do {
-            // TODO: replace with real Stripe Checkout flow via CloudFunctions
-            try await Task.sleep(nanoseconds: 800_000_000)
-            try await service.activateClubSubscription(clubId: clubId)
-            if let fresh = try? await service.fetchClub(id: clubId) {
-                current = fresh
-            }
-        } catch {
-            errorMsg = error.localizedDescription
-        }
-        isProcessing = false
-    }
-
-    private func cancel() async {
-        guard let clubId = current.id else { return }
-        isProcessing = true; errorMsg = nil
-        do {
-            try await service.cancelClubSubscription(clubId: clubId)
-            if let fresh = try? await service.fetchClub(id: clubId) {
-                current = fresh
-            }
-        } catch {
-            errorMsg = error.localizedDescription
-        }
-        isProcessing = false
-    }
 }
 
 // MARK: - SubscriptionStatusBanner
@@ -313,10 +224,10 @@ struct SubscriptionStatusBanner: View {
     }
     private func message(_ s: Club.SubscriptionState) -> String {
         switch s {
-        case .trial(let d):         return "Free trial: \(d) day\(d == 1 ? "" : "s") left. Tap to upgrade."
-        case .expiringSoon(let d):  return "Subscription renews in \(d) day\(d == 1 ? "" : "s"). Tap to manage."
-        case .expired:              return "Subscription expired. Tap to renew."
-        case .cancelled:            return "Subscription cancelled. Tap to reactivate."
+        case .trial(let d):         return "Free trial: \(d) day\(d == 1 ? "" : "s") left. Tap for details."
+        case .expiringSoon(let d):  return "Club dues due in \(d) day\(d == 1 ? "" : "s"). Check your email to pay."
+        case .expired:              return "Club dues expired. Check your email to pay."
+        case .cancelled:            return "Club dues lapsed. Check your email to pay."
         case .active:               return ""
         }
     }

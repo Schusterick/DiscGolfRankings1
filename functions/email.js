@@ -155,4 +155,76 @@ function escapeHtml(s) {
   })[c]);
 }
 
-module.exports = { sendWelcomeEmail, RESEND_API_KEY };
+/// Sends the club-dues reminder email with a Stripe Checkout link.
+/// Called from triggers.js dailySubscriptionCheck at 14/7/1 days out.
+async function sendClubDuesEmail({ to, clubName, daysLeft, statusLabel, checkoutUrl }) {
+  const { Resend } = require("resend");
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) throw new Error("RESEND_API_KEY secret not configured");
+  const resend = new Resend(apiKey);
+
+  const noun = daysLeft === 1 ? "day" : "days";
+  const result = await resend.emails.send({
+    from:    FROM,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${statusLabel} for ${clubName} ends in ${daysLeft} ${noun} 🥏`,
+    html:    clubDuesHtml({ clubName, daysLeft: `${daysLeft} ${noun}`, statusLabel, checkoutUrl }),
+    text:    clubDuesText({ clubName, daysLeft: `${daysLeft} ${noun}`, statusLabel, checkoutUrl })
+  });
+  if (result.error) throw new Error(result.error.message || "Resend error");
+  return result;
+}
+
+function clubDuesHtml({ clubName, daysLeft, statusLabel, checkoutUrl }) {
+  return /* html */ `
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /></head>
+<body style="margin:0;padding:0;background:#0E1525;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#F2F3F7;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0E1525;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" border="0" style="background:#1A2238;border-radius:16px;padding:32px;">
+        <tr><td>
+          <h1 style="margin:0 0 8px;font-size:24px;font-weight:900;">Keep ${escapeHtml(clubName)} active 🥏</h1>
+          <p style="margin:0 0 20px;font-size:15px;color:#9CA3B0;">
+            Your ${escapeHtml(statusLabel.toLowerCase())} ends in <strong style="color:#F5A623;">${escapeHtml(daysLeft)}</strong>.
+            Pay your annual club dues to keep your rankings, members, and bag tags live — no interruption.
+          </p>
+          <table cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 20px;"><tr><td style="border-radius:12px;background:#E94560;">
+            <a href="${checkoutUrl}" style="display:inline-block;padding:14px 28px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;">
+              Pay Club Dues — $50/year
+            </a>
+          </td></tr></table>
+          <p style="margin:0 0 16px;font-size:13px;color:#9CA3B0;">
+            One flat $50 a year for the whole club. We take <strong>0%</strong> of what your members pay you — every dollar of member fees is yours.
+          </p>
+          <p style="margin:24px 0 0;font-size:12px;color:#6E7587;border-top:1px solid #2A3247;padding-top:16px;">
+            Questions? Reply to this email or write to
+            <a href="mailto:discgolfrankings@gmail.com" style="color:#F5A623;">discgolfrankings@gmail.com</a>.<br/>
+            — The DiscGolfRankings Team
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function clubDuesText({ clubName, daysLeft, statusLabel, checkoutUrl }) {
+  return [
+    `Keep ${clubName} active`,
+    ``,
+    `Your ${statusLabel.toLowerCase()} ends in ${daysLeft}. Pay your annual club dues`,
+    `to keep your rankings, members, and bag tags live.`,
+    ``,
+    `Pay Club Dues — $50/year:`,
+    checkoutUrl,
+    ``,
+    `One flat $50 a year for the whole club. We take 0% of member fees.`,
+    ``,
+    `Questions? Reply here or write to discgolfrankings@gmail.com.`,
+    `— The DiscGolfRankings Team`
+  ].join("\n");
+}
+
+module.exports = { sendWelcomeEmail, sendClubDuesEmail, RESEND_API_KEY };
