@@ -39,16 +39,24 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.gold)
             }
 
-            // Three benefit rows
-            VStack(spacing: 14) {
-                benefitRow(icon: "list.number",
+            // Benefit rows — why players use the app
+            VStack(spacing: 12) {
+                benefitRow(icon: "tag.fill",
                            color: Theme.gold,
-                           title: "Live Rankings",
-                           subtitle: "See your tag, your club's leaderboard, and your world rank instantly.")
-                benefitRow(icon: "person.2.fill",
+                           title: "Your Tag, Always With You",
+                           subtitle: "Your bag tag lives on your phone — never lost, never reprinted.")
+                benefitRow(icon: "list.number",
                            color: Theme.accent,
-                           title: "Easy to Join Clubs",
-                           subtitle: "Find your local club, request to join, and start playing for tags.")
+                           title: "Live Rankings",
+                           subtitle: "See your club's full leaderboard and your World Ranking in real time.")
+                benefitRow(icon: "bolt.fill",
+                           color: Theme.gold,
+                           title: "Challenges & Confirmed Scores",
+                           subtitle: "Challenge anyone in your club. Every score is signed off by the players — no disputes.")
+                benefitRow(icon: "bell.badge.fill",
+                           color: Theme.accent,
+                           title: "Instant Notifications",
+                           subtitle: "Know the second you're challenged or your tag moves.")
                 benefitRow(icon: "hand.raised.fill",
                            color: Theme.success,
                            title: "We Don't Take a Cut",
@@ -91,19 +99,23 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.gold)
             }
 
-            VStack(spacing: 14) {
-                benefitRow(icon: "megaphone.fill",
-                           color: Theme.accent,
-                           title: "Streamlined Communication",
-                           subtitle: "Broadcast to every member, post events, and skip the Discord chaos.")
+            VStack(spacing: 12) {
                 benefitRow(icon: "tag.fill",
                            color: Theme.gold,
                            title: "Modern Tag System",
-                           subtitle: "Rankings update automatically after every round. No more spreadsheets.")
+                           subtitle: "Tags move automatically after every confirmed round. No spreadsheets, no disputes.")
+                benefitRow(icon: "megaphone.fill",
+                           color: Theme.accent,
+                           title: "Reach Every Member Instantly",
+                           subtitle: "One tap sends a push notification to your whole club — announcements, events, weather calls.")
                 benefitRow(icon: "link",
                            color: Theme.success,
-                           title: "Shareable Club Profile",
-                           subtitle: "Post your club's link anywhere. New members can join in seconds.")
+                           title: "Grow With a Shareable Link",
+                           subtitle: "Post your club's link anywhere. New members join in seconds and get a tag.")
+                benefitRow(icon: "calendar.badge.checkmark",
+                           color: Theme.gold,
+                           title: "Events, Leagues & Challenges",
+                           subtitle: "Post events with signup links and reminders. Keep the club competing all season.")
             }
             .padding(.horizontal, 20)
 
