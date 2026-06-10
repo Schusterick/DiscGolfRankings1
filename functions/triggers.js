@@ -13,7 +13,7 @@ const { onSchedule }        = require("firebase-functions/v2/scheduler");
 const { logger }            = require("firebase-functions");
 const admin                 = require("firebase-admin");
 
-const { sendWelcomeEmail, sendClubDuesEmail, RESEND_API_KEY } = require("./email");
+const { sendWelcomeEmail, sendClubDuesEmail, sendAdminEducationEmail, sendFeedbackEmail, RESEND_API_KEY } = require("./email");
 const { buildClubDuesCheckoutUrl, STRIPE_SECRET_KEY } = require("./stripe");
 
 // MARK: Super-admin email list
@@ -195,5 +195,109 @@ exports.dailySubscriptionCheck = onSchedule(
       }
     }
     logger.info("dailySubscriptionCheck complete", { sent });
+  }
+);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// dailyAdminEducation — scheduled 10:00 ET. Drips a short "how to use the app"
+// series to club admins (days 0/3/7/14/45 after their club went live), plus a
+// recurring "submit feedback" ask (from day 30, then every ~90 days).
+//
+// Keyed off the club's `subscriptionStartedAt` (set at approval). Sent steps are
+// recorded on the club doc (`eduSent` map + `lastFeedbackSentAt`) so the daily
+// sweep never re-sends. A 14-day catch-up window means clubs approved long
+// before this feature shipped don't get blasted with the whole early series.
+// ──────────────────────────────────────────────────────────────────────────────
+
+exports.dailyAdminEducation = onSchedule(
+  {
+    schedule: "0 10 * * *",
+    timeZone: "America/New_York",
+    secrets:  [RESEND_API_KEY]
+  },
+  async () => {
+    const EDU_DAYS       = [0, 3, 7, 14, 45];
+    const CATCHUP_WINDOW = 14;                 // days; don't fire a step older than this
+    const FEEDBACK_START = 30;                 // first feedback ask
+    const FEEDBACK_EVERY = 90;                 // then roughly every 90 days
+    const now   = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    const snap = await admin.firestore()
+      .collection("clubs")
+      .where("status", "==", "approved")
+      .get();
+
+    let eduSent = 0, fbSent = 0;
+
+    for (const doc of snap.docs) {
+      const c = doc.data();
+      const started = c.subscriptionStartedAt && c.subscriptionStartedAt.toDate
+        ? c.subscriptionStartedAt.toDate()
+        : null;
+      if (!started) continue;
+
+      const daysSince = Math.floor((now.getTime() - started.getTime()) / dayMs);
+      if (daysSince < 0) continue;
+
+      // Which education step (if any) is due and unsent?
+      const already = c.eduSent || {};
+      let dueStep = null;
+      for (const s of EDU_DAYS) {
+        if (daysSince >= s && daysSince <= s + CATCHUP_WINDOW && !already[String(s)]) {
+          dueStep = s;   // keep the latest eligible step so we send at most one/day
+        }
+      }
+
+      // Is a feedback ask due?
+      const lastFb = c.lastFeedbackSentAt && c.lastFeedbackSentAt.toDate
+        ? c.lastFeedbackSentAt.toDate()
+        : null;
+      const feedbackDue = daysSince >= FEEDBACK_START &&
+        (!lastFb || (now.getTime() - lastFb.getTime()) / dayMs >= FEEDBACK_EVERY);
+
+      if (dueStep === null && !feedbackDue) continue;
+
+      // Resolve admin emails (best-effort).
+      const adminUIDs = new Set();
+      if (c.adminUID) adminUIDs.add(c.adminUID);
+      (c.adminUserIds || []).forEach(uid => adminUIDs.add(uid));
+      const emails = [];
+      for (const uid of adminUIDs) {
+        try {
+          const u = await admin.auth().getUser(uid);
+          if (u.email) emails.push(u.email);
+        } catch (_) { /* skip missing user */ }
+      }
+      if (emails.length === 0) continue;
+
+      // Education step (one per day max).
+      if (dueStep !== null) {
+        for (const to of emails) {
+          try {
+            await sendAdminEducationEmail({ to, clubName: c.name, step: dueStep });
+            eduSent++;
+          } catch (err) {
+            logger.warn("admin education email failed", { uid: to, clubId: doc.id, step: dueStep, error: err.message });
+          }
+        }
+        await doc.ref.set({ eduSent: { [String(dueStep)]: true } }, { merge: true });
+      }
+
+      // Feedback ask (independent of the education step).
+      if (feedbackDue) {
+        for (const to of emails) {
+          try {
+            await sendFeedbackEmail({ to, clubName: c.name });
+            fbSent++;
+          } catch (err) {
+            logger.warn("feedback email failed", { uid: to, clubId: doc.id, error: err.message });
+          }
+        }
+        await doc.ref.set({ lastFeedbackSentAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      }
+    }
+
+    logger.info("dailyAdminEducation complete", { eduSent, fbSent });
   }
 );

@@ -50,6 +50,10 @@ exports.onClubApplicationCreated = require("./triggers").onClubApplicationCreate
 // Daily 09:00 ET sweep — 14 / 7 / 1 day subscription expiry warnings.
 exports.dailySubscriptionCheck = require("./triggers").dailySubscriptionCheck;
 
+// Daily 10:00 ET sweep — admin education drip (days 0/3/7/14/45) + recurring
+// "submit feedback" ask (day 30, then ~every 90 days).
+exports.dailyAdminEducation = require("./triggers").dailyAdminEducation;
+
 // Stripe — Club Dues checkout (web) + webhook (single source of truth for
 // marking a club paid). Member-fee (Connect) functions land here in Phase 2.
 exports.createClubDuesCheckout = require("./stripe").createClubDuesCheckout;

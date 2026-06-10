@@ -227,4 +227,161 @@ function clubDuesText({ clubName, daysLeft, statusLabel, checkoutUrl }) {
   ].join("\n");
 }
 
-module.exports = { sendWelcomeEmail, sendClubDuesEmail, RESEND_API_KEY };
+// ──────────────────────────────────────────────────────────────────────────
+// Admin education drip — sent to club admins after approval (day 0 via the
+// onClubApproved trigger; days 3/7/14/45 via dailyAdminEducation sweep).
+// Short by design: 2–3 tips + zero fluff.
+// ──────────────────────────────────────────────────────────────────────────
+
+const EDUCATION_STEPS = {
+  0: {
+    subject: (club) => `${club} is live on DiscGolfRankings 🥏`,
+    title:   "Your club is live!",
+    intro:   "You're approved — and you're holding tag #1. Three quick things to set up while the excitement's hot:",
+    tips: [
+      ["Dress up your club profile", "Add your logo, mission, and schedule (your club page → Edit). This is what new members see first."],
+      ["Assign starting tags", "Admin Dashboard → Manage Tags. Hand out numbers to your current crew — takes two minutes."],
+      ["Share your join link", "Admin Dashboard → Share Join Link. Post it in your Facebook group or text thread; new members join in seconds."],
+    ],
+    outro: "Your first 60 days are completely free. Reply to this email anytime — a real person reads it.",
+  },
+  3: {
+    subject: (club) => `Get your crew into ${club}`,
+    title:   "Get your crew in",
+    intro:   "A club's only as fun as the leaderboard is full. Fastest ways to fill yours:",
+    tips: [
+      ["Post the join link where your club already talks", "Facebook group, GroupMe, text thread — one tap and they're in."],
+      ["Approve join requests as they come", "You'll get a push when someone asks to join. Approve from your Admin Dashboard."],
+      ["Bring it to league night", "Have everyone download the app on the spot — each new member gets the next tag automatically."],
+    ],
+    outro: "Every member you add shows up on the live leaderboard instantly.",
+  },
+  7: {
+    subject: () => "Run your first tag round 🏆",
+    title:   "Run your first tag round",
+    intro:   "This is the moment the app earns its keep. Here's the flow:",
+    tips: [
+      ["Start a Group Round", "From your club page, enter everyone's scores in one place after the round."],
+      ["Players confirm with one tap", "Each player gets a push to sign off on the scores. No disputes, no he-said-she-said."],
+      ["Tags move automatically", "The instant everyone confirms, tags redistribute and the leaderboard updates. No spreadsheets. Ever."],
+    ],
+    outro: "Watch your members start checking the leaderboard on their own — that's when it clicks.",
+  },
+  14: {
+    subject: (club) => `Keep ${club} competing all season`,
+    title:   "Keep them hooked",
+    intro:   "The clubs that thrive use these three between league nights:",
+    tips: [
+      ["Challenges", "Members can challenge anyone in the club — the loser's tag is on the line. Great for keeping mid-pack players engaged."],
+      ["Events with signup links", "Post an event, share the signup link, and let the app send the reminders."],
+      ["Message All Members", "One tap reaches your whole club as a push notification — weather calls, announcements, trash talk."],
+    ],
+    outro: "Engaged members renew their club dues. It compounds.",
+  },
+  45: {
+    subject: (club) => `How's ${club} running?`,
+    title:   "How's the club running?",
+    intro:   "You're about six weeks in. Quick pulse-check on what's available to you:",
+    tips: [
+      ["Using it all?", "Tags, group rounds, challenges, events, broadcasts, your public club page — if any of those are unfamiliar, reply and we'll point you right at it."],
+      ["Heads up: your free trial ends in about 2 weeks", "We'll email you a secure payment link for your annual club dues — $50/year flat for the whole club. Your members never pay us anything."],
+      ["Tell us what's missing", "Seriously — reply to this email. Feature ideas from club admins drive what we build next."],
+    ],
+    outro: "Thanks for running your club with us. 🥏",
+  },
+};
+
+/// Sends one step of the admin education drip.
+async function sendAdminEducationEmail({ to, clubName, step }) {
+  const t = EDUCATION_STEPS[step];
+  if (!t) throw new Error(`unknown education step: ${step}`);
+  const { Resend } = require("resend");
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) throw new Error("RESEND_API_KEY secret not configured");
+  const resend = new Resend(apiKey);
+
+  const result = await resend.emails.send({
+    from:    FROM,
+    replyTo: REPLY_TO,
+    to,
+    subject: t.subject(clubName),
+    html:    adminShellHtml(t),
+    text:    adminShellText(t),
+  });
+  if (result.error) throw new Error(result.error.message || "Resend error");
+  return result;
+}
+
+/// Sends the recurring "help us improve" feedback ask.
+async function sendFeedbackEmail({ to, clubName }) {
+  const { Resend } = require("resend");
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) throw new Error("RESEND_API_KEY secret not configured");
+  const resend = new Resend(apiKey);
+
+  const t = {
+    title: "One question for you",
+    intro: `What's one thing DiscGolfRankings could do better for ${clubName}?`,
+    tips: [
+      ["Just hit reply", "Your answer lands directly in the founder's inbox — not a ticket system, not a survey form."],
+      ["Nothing is too small", "A confusing button, a missing feature, something another app does better — all of it helps."],
+    ],
+    outro: "This app is built by one disc golfer and shaped by club admins like you. Thanks for being early. 🥏",
+  };
+
+  const result = await resend.emails.send({
+    from:    FROM,
+    replyTo: REPLY_TO,
+    to,
+    subject: "What should we build next? (just hit reply)",
+    html:    adminShellHtml(t),
+    text:    adminShellText(t),
+  });
+  if (result.error) throw new Error(result.error.message || "Resend error");
+  return result;
+}
+
+// Shared dark-theme shell matching the welcome/dues emails.
+function adminShellHtml(t) {
+  const tipsHtml = t.tips.map(([h, b]) => `
+              <h2 style="margin:20px 0 6px;font-size:16px;color:#E94560;">${escapeHtml(h)}</h2>
+              <p style="margin:0;font-size:14px;line-height:1.6;color:#F2F3F7;">${escapeHtml(b)}</p>`).join("\n");
+  return /* html */ `
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /></head>
+<body style="margin:0;padding:0;background:#0E1525;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#F2F3F7;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0E1525;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" border="0" style="background:#1A2238;border-radius:16px;padding:32px;">
+        <tr><td>
+          <h1 style="margin:0 0 8px;font-size:24px;font-weight:900;">${escapeHtml(t.title)}</h1>
+          <p style="margin:0 0 8px;font-size:15px;color:#9CA3B0;">${escapeHtml(t.intro)}</p>
+          ${tipsHtml}
+          <p style="margin:24px 0 0;font-size:13px;color:#9CA3B0;">${escapeHtml(t.outro)}</p>
+          <p style="margin:24px 0 0;font-size:12px;color:#6E7587;border-top:1px solid #2A3247;padding-top:16px;">
+            Own Your Rank. — The DiscGolfRankings Team<br/>
+            Questions? Just reply, or write to
+            <a href="mailto:discgolfrankings@gmail.com" style="color:#F5A623;">discgolfrankings@gmail.com</a>.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function adminShellText(t) {
+  return [
+    t.title.toUpperCase(), "", t.intro, "",
+    ...t.tips.flatMap(([h, b]) => [`• ${h}`, `  ${b}`, ""]),
+    t.outro, "", "— The DiscGolfRankings Team",
+  ].join("\n");
+}
+
+module.exports = {
+  sendWelcomeEmail,
+  sendClubDuesEmail,
+  sendAdminEducationEmail,
+  sendFeedbackEmail,
+  RESEND_API_KEY
+};
